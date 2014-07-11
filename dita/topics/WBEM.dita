@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE reference PUBLIC "urn:pubid:zenoss.com:doctypes:dita:dtd:reference" "reference.dtd">
+<reference id="referenceid">
+  <title>ZenPacks.zenoss.WBEM</title>
+  <shortdesc>This ZenPack adds a WBEM data source type and a WBEMPlugin base modeler plugin.</shortdesc>
+  <refbody>
+    <section>
+      <p>The WBEM data source type simplifies collecting metrics from WBEM providers with CQL queries.
+        The WBEMPlugin modeler plugin class simplifies modeling devices and applications that support WBEM.</p>
+    </section>
+  </refbody>
+</reference>

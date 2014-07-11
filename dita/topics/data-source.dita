@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE reference PUBLIC "urn:pubid:zenoss.com:doctypes:dita:dtd:reference" "reference.dtd">
+<reference id="referenceid">
+  <title>WBEM Data Source Type</title>
+  <refbody>
+    <section>
+      <p>The WBEM data source type supports the following properties.</p>
+      <dl>
+        <dlentry>
+          <dt>Namespace</dt>
+          <dd>The WBEM namespace. This property is required and there is no default value. A common example is <codeph>root/cimv2</codeph>. </dd>
+        </dlentry>
+        <dlentry>
+          <dt>CQL Query</dt>
+          <dd>The CQL query to execute. This property is required and there is no default value. </dd>
+        </dlentry>
+        <dlentry>
+          <dt>Result Component Key</dt>
+          <dd>(Optional) Use this property when the WBEM data source is part of a monitoring
+            template that is bound to components. Set the value to the attribute or column name in
+            the CQL result set that contains the component identifier.</dd>
+        </dlentry>
+        <dlentry>
+          <dt>Result Component Value</dt>
+          <dd>(Optional) Use this property when the WBEM data source is part of a monitoring
+            template that is bound to components. Set the value to the Result Component Key column
+            of the CQL result set.  Typically, this value is a
+            TALES expression, such as <codeph>&#36;&#123;here/id&#125;</codeph> or
+            <codeph>&#36;&#123;here/wbemInstanceId&#125;</codeph>.</dd>
+        </dlentry>
+        <dlentry>
+          <dt>Result Timestamp Key</dt>
+          <dd>(Optional) Use this property in either device-bound or component-bound templates when the CQL result set includes a column
+            noting the time at which the data was originally collected. Like the Result Component Key property, set the value to
+            the attribute or column name in the CQL result set. The default value is NOW.</dd>
+        </dlentry>
+      </dl>
+    </section>
+  </refbody>
+</reference>
