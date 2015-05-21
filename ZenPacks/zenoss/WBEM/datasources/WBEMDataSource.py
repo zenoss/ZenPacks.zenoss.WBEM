@@ -12,7 +12,7 @@ log = logging.getLogger('zen.WBEM')
 
 import calendar
 
-from twisted.internet import reactor, ssl
+from twisted.internet import threads
 
 from zope.component import adapts
 from zope.interface import implements
@@ -31,7 +31,7 @@ from ZenPacks.zenoss.WBEM.utils import addLocalLibPath, result_errmsg
 
 addLocalLibPath()
 
-from pywbem.twisted_client import ExecQuery
+from pywbem.cim_operations import WBEMConnection
 
 
 def string_to_lines(string):
@@ -158,25 +158,17 @@ class WBEMDataSourcePlugin(PythonDataSourcePlugin):
 
         credentials = (ds0.zWBEMUsername, ds0.zWBEMPassword)
 
-        factory = ExecQuery(
-            credentials,
-            ds0.params['query_language'],
-            ds0.params['query'],
-            namespace=ds0.params['namespace'])
+        url = '{0}://{1}:{2}'.format(
+            'https' if ds0.zWBEMUseSSL else 'http',
+            ds0.manageIp, ds0.zWBEMPort
+        )
 
-        if ds0.zWBEMUseSSL:
-            reactor.connectSSL(
-                            host=ds0.manageIp,
-                            port=int(ds0.zWBEMPort),
-                            factory=factory,
-                            contextFactory=ssl.ClientContextFactory())
-        else:
-            reactor.connectTCP(
-                            host=ds0.manageIp,
-                            port=int(ds0.zWBEMPort),
-                            factory=factory)
-
-        return factory.deferred
+        def _inner():
+            return WBEMConnection(url, credentials).ExecQuery(
+                ds0.params['query_language'],
+                ds0.params['query'],
+                namespace=ds0.params['namespace'])
+        return threads.deferToThread(_inner)
 
     def onSuccess(self, results, config):
         data = self.new_data()
