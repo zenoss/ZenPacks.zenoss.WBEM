@@ -25,8 +25,8 @@ class ZenPack(ZenPackBase):
     """WBEM ZenPack."""
 
     packZProperties = [
-        ('zWBEMPort', '5988', 'integer'),
+        ('zWBEMPort', '5989', 'integer'),
         ('zWBEMUsername', '', 'string'),
         ('zWBEMPassword', '', 'password'),
-        ('zWBEMUseSSL', False, 'boolean'),
+        ('zWBEMUseSSL', True, 'boolean'),
         ]

@@ -105,10 +105,17 @@ class WBEMDataSourceInfo(RRDDataSourceInfo):
     cycletime = ProxyProperty('cycletime')
 
     namespace = ProxyProperty('namespace')
-    query = ProxyProperty('query')
     result_component_key = ProxyProperty('result_component_key')
     result_component_value = ProxyProperty('result_component_value')
     result_timestamp_key = ProxyProperty('result_timestamp_key')
+
+    @property
+    def query(self):
+        return "\n".join(self._object.query)
+
+    @query.setter
+    def query(self, val):
+        self._object.query = string_to_lines(val)
 
 
 class WBEMDataSourcePlugin(PythonDataSourcePlugin):
