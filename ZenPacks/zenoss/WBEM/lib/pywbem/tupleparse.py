@@ -103,9 +103,9 @@ def pcdata(tt):
     The tt must not have non-character children."""
     import types
     for x in tt[2]:
-        if not isinstance(x, types.StringTypes):
+        if not isinstance(x or '', types.StringTypes):
             raise ParseError, 'unexpected node %s under %s' % (`x`, `tt`)
-    return ''.join(tt[2])
+    return ''.join(x or '' for x in tt[2])
 
 
 def name(tt):

@@ -331,11 +331,7 @@ class EnumerateInstances(WBEMClientFactory):
         res = []
         for x in xml.findall('.//VALUE.NAMEDINSTANCE'):
             s = tostring(x)
-            print
-            print '!!!!!!!!!!!!!!!!'
-            print s
             tt = pywbem.tupletree.xml_to_tupletree(s)
-            print tt
             r = pywbem.tupleparse.parse_value_namedinstance(tt)
             res.append(r)
         return res
