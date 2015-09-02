@@ -11,18 +11,18 @@ from mock import Mock, sentinel
 
 from Products.ZenTestCase.BaseTestCase import BaseTestCase
 
-from ZenPacks.zenoss.WBEM.utils import addLocalLibPath
-addLocalLibPath()
+from ZenPacks.zenoss.WBEM.modeler.wbem import WBEMPlugin
 
-from pywbem.twisted_client import EnumerateInstances
 
-class TestParseResponse(BaseTestCase):
-    def test_parses(self):
-        self.assertEqual(len(EnumerateInstances.parseResponse(2)), 0)
+class TestWBEMPlugin(BaseTestCase):
+
+    def test_present(self):
+        self.assertTrue(WBEMPlugin)
+
 
 def test_suite():
     from unittest import TestSuite, makeSuite
     suite = TestSuite()
-    suite.addTest(makeSuite(TestParseResponse))
+    suite.addTest(makeSuite(TestWBEMPlugin))
     return suite
 

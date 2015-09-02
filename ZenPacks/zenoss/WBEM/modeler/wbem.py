@@ -50,7 +50,7 @@ class WBEMPlugin(PythonPlugin):
         'zWBEMUsername',
         'zWBEMPassword',
         'zWBEMUseSSL',
-        )
+    )
 
     wbemQueries = {}
 
