@@ -40,7 +40,7 @@ from pywbem.twisted_client import (
     EnumerateClasses,
     EnumerateInstanceNames,
     EnumerateInstances,
-    )
+)
 
 
 class WBEMPlugin(PythonPlugin):
