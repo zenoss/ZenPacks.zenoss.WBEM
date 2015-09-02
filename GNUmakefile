@@ -20,10 +20,16 @@ egg:
 	# setup.py will call 'make build' before creating the egg
 	python setup.py bdist_egg
 
+build:
+	cd $(PYWBEM_DIR) ; \
+		PYTHONPATH="$(PYTHONPATH):$(LIB_DIR)" \
+		$(PYTHON) setup.py install \
+		--install-lib="$(LIB_DIR)" \
+		--install-scripts="$(BIN_DIR)"
+
 clean:
 	rm -rf lib build dist *.egg-info
 	cd $(PYWBEM_DIR) ; rm -rf build dist *.egg-info
-
 
 test:
 	runtests -v ZenPacks.zenoss.WBEM

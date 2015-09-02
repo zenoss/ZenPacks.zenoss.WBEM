@@ -58,7 +58,7 @@ class TestParseResponse(BaseTestCase):
         self.assertEqual(res[0].classname, 'Clar_DiskDrive')
         self.assertEqual(len(res[0].properties), 8)
 
-        self.assertEqual(res[0].properties['OtherInterconnectType'], '')
+        self.assertEqual(res[0].properties['OtherInterconnectType'].value, '')
 
 
 def test_suite():

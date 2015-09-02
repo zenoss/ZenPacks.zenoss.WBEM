@@ -299,6 +299,7 @@ class ExecQuery(WBEMClientFactory):
 
         return [pywbem.tupleparse.parse_instance(x) for x in tt]
 
+
 class EnumerateInstances(WBEMClientFactory):
     """Factory to produce EnumerateInstances WBEM clients."""
 
@@ -325,12 +326,15 @@ class EnumerateInstances(WBEMClientFactory):
         return '<%s(/%s:%s) at 0x%x>' % \
                (self.__class__, self.namespace, self.classname, id(self))
 
-    def parseResponse(self, xml):
-
-        tt = [pywbem.tupletree.xml_to_tupletree(tostring(x))
-              for x in xml.findall('.//VALUE.NAMEDINSTANCE')]
-
-        return [pywbem.tupleparse.parse_value_namedinstance(x) for x in tt]
+    @staticmethod
+    def parseResponse(xml):
+        res = []
+        for x in xml.findall('.//VALUE.NAMEDINSTANCE'):
+            s = tostring(x)
+            tt = pywbem.tupletree.xml_to_tupletree(s)
+            r = pywbem.tupleparse.parse_value_namedinstance(tt)
+            res.append(r)
+        return res
 
 class EnumerateInstanceNames(WBEMClientFactory):
     """Factory to produce EnumerateInstanceNames WBEM clients."""

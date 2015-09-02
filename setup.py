@@ -15,8 +15,18 @@ PREV_ZENPACK_NAME = ""
 ################################
 # Zenoss will not overwrite any changes you make below here.
 
+import os
+from subprocess import Popen, PIPE
 from setuptools import setup, find_packages
 
+
+# Run "make build" if a GNUmakefile is present.
+if os.path.isfile('GNUmakefile'):
+    print 'GNUmakefile found. Running "make build" ..'
+    p = Popen('make build', stdout=PIPE, stderr=PIPE, shell=True)
+    print p.communicate()[0]
+    if p.returncode != 0:
+        raise Exception('"make build" exited with an error: %s' % p.returncode)
 
 setup(
     # This ZenPack metadata should usually be edited with the Zenoss
