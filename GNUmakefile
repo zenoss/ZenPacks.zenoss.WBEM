@@ -30,3 +30,6 @@ build:
 clean:
 	rm -rf lib build dist *.egg-info
 	cd $(PYWBEM_DIR) ; rm -rf build dist *.egg-info
+
+test:
+	runtests -v ZenPacks.zenoss.WBEM

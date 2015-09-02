@@ -2,3 +2,6 @@
 *.egg-info
 build
 dist
+src/pywbem/moflextab.py
+src/pywbem/mofparsetab.py
+src/pywbem/parser.out
