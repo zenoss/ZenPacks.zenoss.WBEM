@@ -80,27 +80,30 @@ class WBEMPlugin(PythonPlugin):
             namespace = namespaces[0]
             if len(namespaces) > 1:
                 classname = namespaces[1]
+                
+            if isinstance(wbemclass, (str, unicode)):
+                wbemclass = {'method':wbemclass}
 
             userCreds = (device.zWBEMUsername, device.zWBEMPassword)
 
-            if wbemclass == 'ec':
+            if wbemclass.get('method') == 'ec':
                 wbemClass = EnumerateClasses(
-                    userCreds, namespace=namespace)
+                    userCreds, namespace=namespace, **wbemclass.get('options',{}))
 
-            elif wbemclass == 'ecn':
+            elif wbemclass.get('method') == 'ecn':
                 wbemClass = EnumerateClassNames(
-                    userCreds, namespace=namespace)
+                    userCreds, namespace=namespace, **wbemclass.get('options',{}))
 
-            elif wbemclass == 'ei':
+            elif wbemclass.get('method') == 'ei':
                 wbemClass = EnumerateInstances(
-                    userCreds, namespace=namespace, classname=classname)
+                    userCreds, namespace=namespace, classname=classname, **wbemclass.get('options',{}))
 
-            elif wbemclass == 'ein':
+            elif wbemclass.get('method') == 'ein':
                 wbemClass = EnumerateInstanceNames(
-                    userCreds, namespace=namespace, classname=classname)
+                    userCreds, namespace=namespace, classname=classname, **wbemclass.get('options',{}))
 
             else:
-                log.warn('Incorrect class call %s', wbemclass)
+                log.warn('Incorrect class call %s', wbemclass.get('method'))
                 wbemClass = EnumerateClasses(userCreds,
                                              namespace=namespace)
 
