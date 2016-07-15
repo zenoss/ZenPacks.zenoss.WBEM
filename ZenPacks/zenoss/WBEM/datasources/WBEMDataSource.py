@@ -17,6 +17,7 @@ from twisted.internet import threads
 from zope.component import adapts
 from zope.interface import implements
 
+from Products.ZenEvents import ZenEventClasses
 from Products.ZenUtils.Utils import prepId
 from Products.Zuul.form import schema
 from Products.Zuul.infos import ProxyProperty
@@ -179,6 +180,7 @@ class WBEMDataSourcePlugin(PythonDataSourcePlugin):
 
     def onSuccess(self, results, config):
         data = self.new_data()
+        ds0 = config.datasources[0]
 
         if not isinstance(results, list):
             results = [results]
@@ -190,7 +192,7 @@ class WBEMDataSourcePlugin(PythonDataSourcePlugin):
                 for x in config.datasources)
 
         result_component_key = \
-            config.datasources[0].params['result_component_key']
+            ds0.params['result_component_key']
 
         for result in results:
             if result_component_key:
@@ -201,7 +203,7 @@ class WBEMDataSourcePlugin(PythonDataSourcePlugin):
                     continue
 
             else:
-                datasource = config.datasources[0]
+                datasource = ds0
 
             if result_component_key and result_component_key in result:
                 result_component_value = datasource.params.get(
@@ -235,12 +237,15 @@ class WBEMDataSourcePlugin(PythonDataSourcePlugin):
             'eventKey': 'wbemCollection',
             'summary': 'WBEM: successful collection',
             'device': config.id,
+            'eventClass': ds0.eventClass,
+            'severity': ZenEventClasses.Clear
             })
 
         return data
 
     def onError(self, result, config):
         errmsg = 'WBEM: %s' % result_errmsg(result)
+        ds0 = config.datasources[0]
 
         log.error('%s %s', config.id, errmsg)
 
@@ -250,6 +255,8 @@ class WBEMDataSourcePlugin(PythonDataSourcePlugin):
             'eventKey': 'wbemCollection',
             'summary': errmsg,
             'device': config.id,
+            'severity': ds0.severity,
+            'eventClass': ds0.eventClass
             })
 
         return data
