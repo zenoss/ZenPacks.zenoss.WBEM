@@ -1,6 +1,6 @@
 ##############################################################################
 #
-# Copyright (C) Zenoss, Inc. 2012, all rights reserved.
+# Copyright (C) Zenoss, Inc. 2012, 2016, all rights reserved.
 #
 # This content is made available according to terms specified in
 # License.zenoss under the directory where your Zenoss product is installed.
@@ -27,20 +27,20 @@ set to succesfully pull data.
 """
 
 from twisted.internet import ssl, reactor
-from twisted.internet.defer import DeferredList
+from twisted.internet.defer import DeferredList, CancelledError
 
 from Products.DataCollector.plugins.CollectorPlugin import PythonPlugin
 
 from ZenPacks.zenoss.WBEM.utils import addLocalLibPath, result_errmsg
 
-addLocalLibPath()
-
-from pywbem.twisted_client import (
+from ZenPacks.zenoss.WBEM.patches import (
     EnumerateClassNames,
     EnumerateClasses,
     EnumerateInstanceNames,
-    EnumerateInstances,
+    EnumerateInstances
 )
+
+addLocalLibPath()
 
 
 class WBEMPlugin(PythonPlugin):
@@ -120,6 +120,9 @@ class WBEMPlugin(PythonPlugin):
 
         # Execute the deferreds and return the results to the callback.
         d = DeferredList(deferreds, consumeErrors=True)
+        add_collector_timeout(
+            d, device.zCollectorClientTimeout
+        )
         d.addCallback(self.check_results, device, log)
 
         return d
@@ -137,3 +140,34 @@ class WBEMPlugin(PythonPlugin):
             return results
 
         return results
+
+
+def add_collector_timeout(deferred, seconds):
+    """Raise error on deferred when modeler is timed out."""
+    error = CancelledError("WBEM query timeout")
+
+    def handle_timeout():
+        deferred.cancel()
+
+    def handle_result(result):
+        if timeout_d.active():
+            timeout_d.cancel()
+        if isinstance(result, list):
+            for item in result:
+                if not item[0] and item[1].check(CancelledError):
+                    raise error
+        return result
+
+    def handle_failure(failure):
+        # define this method to catch errors from canceled deferredlist
+        # on Zenoss 4.2.x with Twisted v.11
+        if failure.check(CancelledError):
+            raise error
+
+        return failure
+
+    timeout_d = reactor.callLater(seconds, handle_timeout)
+    deferred.addBoth(handle_result)
+    deferred.addErrback(handle_failure)
+
+    return deferred
