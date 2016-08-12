@@ -21,7 +21,7 @@ from pywbem.twisted_client import (
 )
 
 
-class HandleResponceMixin():
+class HandleResponseMixin():
     """Override base parseErrorAndResponse from pywbem.twisted_client module
     to catch XML parsing error"""
 
@@ -52,17 +52,17 @@ class HandleResponceMixin():
         self.deferred.errback(CIMError(code, error.attrib['DESCRIPTION']))
 
 
-class EnumerateInstances(HandleResponceMixin, BaseEnumerateInstances):
+class EnumerateInstances(HandleResponseMixin, BaseEnumerateInstances):
     pass
 
 
-class EnumerateInstanceNames(HandleResponceMixin, BaseEnumerateInstanceNames):
+class EnumerateInstanceNames(HandleResponseMixin, BaseEnumerateInstanceNames):
     pass
 
 
-class EnumerateClasses(HandleResponceMixin, BaseEnumerateClasses):
+class EnumerateClasses(HandleResponseMixin, BaseEnumerateClasses):
     pass
 
 
-class EnumerateClassNames(HandleResponceMixin, BaseEnumerateClassNames):
+class EnumerateClassNames(HandleResponseMixin, BaseEnumerateClassNames):
     pass
