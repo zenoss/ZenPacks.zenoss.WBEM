@@ -7,6 +7,9 @@
 #
 ##############################################################################
 
+from ZenPacks.zenoss.WBEM.utils import addLocalLibPath
+addLocalLibPath()
+
 from pywbem import CIMError
 try:
     from elementtree.ElementTree import fromstring
