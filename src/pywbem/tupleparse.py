@@ -104,7 +104,7 @@ def pcdata(tt):
     import types
     for x in tt[2]:
         if not isinstance(x or '', types.StringTypes):
-            raise ParseError, 'unexpected node %s under %s' % (`x`, `tt`)
+            raise ParseError, 'unexpected node %s under %s' % x, tt)
     return ''.join(x or '' for x in tt[2])
 
 
@@ -170,7 +170,7 @@ def check_node(tt, nodename, required_attrs = [], optional_attrs = [],
             if isinstance(c, types.StringTypes):
                 if c.lstrip(' \t\n') <> '':
                     raise ParseError('unexpected non-blank pcdata node %s '
-                                     'under %s' % (`c`, name(tt)))
+                                     'under %s' % (c, name(tt)))
 
     
 def one_child(tt, acceptable):
@@ -220,7 +220,7 @@ def list_of_various(tt, acceptable):
     for child in kids(tt):
         if name(child) not in acceptable:
             raise ParseError('expected one of %s under %s, got %s' % 
-                             (acceptable, name(tt), `name(child)`))
+                             (acceptable, name(tt), name(child)))
         r.append(parse_any(child))
 
     return r
@@ -255,7 +255,7 @@ def list_of_same(tt, acceptable):
     w = name(k[0])
     if w not in acceptable:
         raise ParseError('expected one of %s under %s, got %s' % 
-                             (acceptable, name(tt), `w`))
+                             (acceptable, name(tt), w))
     r = []
     for child in k:
         if name(child) <> w:
@@ -363,7 +363,7 @@ def parse_value_namedinstance(tt):
 
     k = kids(tt)
     if len(k) <> 2:
-        raise ParseError('expecting (INSTANCENAME, INSTANCE), got %s' % `k`)
+        raise ParseError('expecting (INSTANCENAME, INSTANCE), got %s' % k)
 
     instancename = parse_instancename(k[0])
     instance = parse_instance(k[1])        
@@ -390,7 +390,7 @@ def parse_value_namedobject(tt):
         object.path = path
     else:
         raise ParseError('Expecting one or two elements, got %s' %
-                         `kids(tt)`)
+                         kids(tt))
 
     return (name(tt), attrs(tt), object)
 
@@ -553,7 +553,7 @@ def parse_instancepath(tt):
 
     if len(kids(tt)) != 2:
         raise ParseError('Expecting (NAMESPACEPATH, INSTANCENAME), got %s'
-                         % `kids(tt)`)
+                         % kids(tt))
 
     nspath = parse_namespacepath(kids(tt)[0])
     instancename = parse_instancename(kids(tt)[1])
@@ -680,7 +680,7 @@ def parse_keyvalue(tt):
             return int(p.strip())
         except ValueError, e:
             raise ParseError('invalid numeric %s under %s' %
-                             (`p`, name(tt)))
+                             (p, name(tt)))
     else:
         raise ParseError('invalid VALUETYPE %s in %s',
                          vt, name(tt))
@@ -835,7 +835,7 @@ def parse_qualifier(tt):
         rv = a.get(i)
         if rv not in ['true', 'false', None]:
             raise ParseError("invalid value %s for %s on %s" %
-                             (`rv`, i, name(tt)))
+                             (rv, i, name(tt)))
         if rv == 'true':
             rv = True
         elif rv == 'false':
@@ -1186,7 +1186,7 @@ def parse_methodcall(tt):
                ['LOCALCLASSPATH', 'LOCALINSTANCEPATH', 'PARAMVALUE'])
     path = list_of_matching(tt, ['LOCALCLASSPATH','LOCALINSTANCEPATH'])
     if len(path) != 1:
-        raise ParseError('Expecting one of LOCALCLASSPATH or LOCALINSTANCEPATH, got %s' % `path`)
+        raise ParseError('Expecting one of LOCALCLASSPATH or LOCALINSTANCEPATH, got %s' % path)
     path = path[0]
     params = list_of_matching(tt, ['PARAMVALUE'])
     return (name(tt), attrs(tt), path, params)
@@ -1449,4 +1449,4 @@ def unpack_boolean(p):
     elif p == '':
         return None
     else:
-        raise ParseError('invalid boolean %s' % `p`)
+        raise ParseError('invalid boolean %s' % p)
