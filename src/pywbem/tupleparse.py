@@ -104,7 +104,7 @@ def pcdata(tt):
     import types
     for x in tt[2]:
         if not isinstance(x or '', types.StringTypes):
-            raise ParseError, 'unexpected node %s under %s' % x, tt)
+            raise ParseError, 'unexpected node %s under %s' % (x, tt)
     return ''.join(x or '' for x in tt[2])
 
 
