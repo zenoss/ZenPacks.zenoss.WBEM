@@ -139,6 +139,21 @@ class WBEMPlugin(PythonPlugin):
 
             return results
 
+        try:
+            results_new = []
+            for success, instances in results:
+                if success:
+                    inst = []
+                    for instance in instances:
+                        inst.append(instance.__dict__)
+                    results_new.append((success, inst))
+                else:
+                    results_new.append((success, instances))
+
+            log.debug('Results: {0}'.format(results_new))
+        except:
+            pass
+
         return results
 
 

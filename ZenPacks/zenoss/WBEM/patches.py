@@ -1,6 +1,6 @@
 ##############################################################################
 #
-# Copyright (C) Zenoss, Inc. 2016, all rights reserved.
+# Copyright (C) Zenoss, Inc. 2017, all rights reserved.
 #
 # This content is made available according to terms specified in
 # License.zenoss under the directory where your Zenoss product is installed.
@@ -11,6 +11,7 @@ from ZenPacks.zenoss.WBEM.utils import addLocalLibPath
 addLocalLibPath()
 
 from pywbem import CIMError
+from pywbem import twisted_client
 try:
     from elementtree.ElementTree import fromstring
 except ImportError, arg:
@@ -69,3 +70,19 @@ class EnumerateClasses(HandleResponseMixin, BaseEnumerateClasses):
 
 class EnumerateClassNames(HandleResponseMixin, BaseEnumerateClassNames):
     pass
+
+
+class NewWBEMClient(object, twisted_client.WBEMClient):
+
+    def rawDataReceived(self, data):
+        """
+        Override this method to cancel deferred timeout
+        in case we got some response from resource side.
+        """
+        if hasattr(self.factory, 'deferred_timeout'):
+            if self.factory.deferred_timeout.active():
+                self.factory.deferred_timeout.cancel()
+        super(NewWBEMClient, self).rawDataReceived(data)
+
+
+twisted_client.WBEMClient = NewWBEMClient
