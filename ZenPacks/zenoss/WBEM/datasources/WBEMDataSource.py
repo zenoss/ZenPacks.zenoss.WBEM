@@ -1,6 +1,6 @@
 ##############################################################################
 #
-# Copyright (C) Zenoss, Inc. 2012, all rights reserved.
+# Copyright (C) Zenoss, Inc. 2017, all rights reserved.
 #
 # This content is made available according to terms specified in
 # License.zenoss under the directory where your Zenoss product is installed.
@@ -12,7 +12,9 @@ log = logging.getLogger('zen.WBEM')
 
 import calendar
 
-from twisted.internet import threads
+from twisted.internet import ssl, reactor, defer
+from twisted.internet.error import TimeoutError
+from twisted.python import failure
 
 from zope.component import adapts
 from zope.interface import implements
@@ -32,7 +34,7 @@ from ZenPacks.zenoss.WBEM.utils import addLocalLibPath, result_errmsg
 
 addLocalLibPath()
 
-from pywbem.cim_operations import WBEMConnection
+from pywbem.twisted_client import ExecQuery
 
 
 def string_to_lines(string):
@@ -121,7 +123,7 @@ class WBEMDataSourceInfo(RRDDataSourceInfo):
 
 class WBEMDataSourcePlugin(PythonDataSourcePlugin):
     proxy_attributes = (
-        'zWBEMPort', 'zWBEMUsername', 'zWBEMPassword', 'zWBEMUseSSL',
+        'zWBEMPort', 'zWBEMUsername', 'zWBEMPassword', 'zWBEMUseSSL', 'zWBEMRequestTimeout'
         )
 
     @classmethod
@@ -166,17 +168,25 @@ class WBEMDataSourcePlugin(PythonDataSourcePlugin):
 
         credentials = (ds0.zWBEMUsername, ds0.zWBEMPassword)
 
-        url = '{0}://{1}:{2}'.format(
-            'https' if ds0.zWBEMUseSSL else 'http',
-            ds0.manageIp, ds0.zWBEMPort
-        )
+        factory = ExecQuery(
+            credentials,
+            ds0.params['query_language'],
+            ds0.params['query'],
+            namespace=ds0.params['namespace'])
 
-        def _inner():
-            return WBEMConnection(url, credentials).ExecQuery(
-                ds0.params['query_language'],
-                ds0.params['query'],
-                namespace=ds0.params['namespace'])
-        return threads.deferToThread(_inner)
+        if ds0.zWBEMUseSSL:
+            reactor.connectSSL(
+                host=ds0.manageIp,
+                port=int(ds0.zWBEMPort),
+                factory=factory,
+                contextFactory=ssl.ClientContextFactory())
+        else:
+            reactor.connectTCP(
+                host=ds0.manageIp,
+                port=int(ds0.zWBEMPort),
+                factory=factory)
+
+        return add_timeout(factory, int(ds0.zWBEMRequestTimeout))
 
     def onSuccess(self, results, config):
         data = self.new_data()
@@ -184,6 +194,15 @@ class WBEMDataSourcePlugin(PythonDataSourcePlugin):
 
         if not isinstance(results, list):
             results = [results]
+
+        ds0 = config.datasources[0]
+        log.debug('Monitoring template name: {}'.format(ds0.template))
+        log.debug('Monitoring query: {}'.format(ds0.params['query']))
+        for instance in results:
+            try:
+                log.debug('Monitoring result: {0}'.format(instance.__dict__))
+            except AttributeError:
+                log.debug('Monitoring result is empty')
 
         # Convert datasources to a dictionary with result_component_value as
         # the key. This allows us to avoid an inner loop below.
@@ -239,13 +258,16 @@ class WBEMDataSourcePlugin(PythonDataSourcePlugin):
             'device': config.id,
             'eventClass': ds0.eventClass,
             'severity': ZenEventClasses.Clear
-            })
+        })
 
         return data
 
     def onError(self, result, config):
         errmsg = 'WBEM: %s' % result_errmsg(result)
         ds0 = config.datasources[0]
+
+        if isinstance(result, failure.Failure) and isinstance(result.value, defer.CancelledError):
+            errmsg = 'WBEM: %s' % 'request time exceeds value of zWBEMRequestTimeout'
 
         log.error('%s %s', config.id, errmsg)
 
@@ -257,6 +279,33 @@ class WBEMDataSourcePlugin(PythonDataSourcePlugin):
             'device': config.id,
             'severity': ds0.severity,
             'eventClass': ds0.eventClass
-            })
+        })
 
         return data
+
+
+def add_timeout(factory, seconds):
+    """Return new Deferred that will errback TimeoutError after seconds."""
+    deferred_with_timeout = defer.Deferred()
+    deferred = factory.deferred
+
+    def fire_timeout():
+        deferred.cancel()
+        if not deferred_with_timeout.called:
+            deferred_with_timeout.errback(failure.Failure(TimeoutError()))
+
+    delayed_timeout = reactor.callLater(seconds, fire_timeout)
+    factory.deferred_timeout = delayed_timeout
+
+    def handle_result(result):
+        if delayed_timeout.active():
+            delayed_timeout.cancel()
+
+        if not deferred_with_timeout.called:
+            if isinstance(result, failure.Failure):
+                deferred_with_timeout.errback(result)
+            else:
+                deferred_with_timeout.callback(result)
+
+    deferred.addBoth(handle_result)
+    return deferred_with_timeout
