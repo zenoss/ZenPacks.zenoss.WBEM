@@ -17,13 +17,6 @@ try:
 except ImportError, arg:
     from xml.etree.ElementTree import fromstring
 
-from pywbem.twisted_client import (
-    EnumerateClassNames as BaseEnumerateClassNames,
-    EnumerateClasses as BaseEnumerateClasses,
-    EnumerateInstanceNames as BaseEnumerateInstanceNames,
-    EnumerateInstances as BaseEnumerateInstances
-)
-
 
 class HandleResponseMixin():
     """Override base parseErrorAndResponse from pywbem.twisted_client module
@@ -44,7 +37,14 @@ class HandleResponseMixin():
 
         error = xml.find('.//ERROR')
 
-        if error is None:
+        if error is not None:
+            msg = error.get('DESCRIPTION')
+            if msg and "context cannot be found" in msg:
+                error.set(
+                    'DESCRIPTION',
+                    "Response is not complete for {} classname".format(self.classname)
+                )
+        else:
             self.deferred.callback(self.parseResponse(xml))
             return
 
@@ -56,19 +56,27 @@ class HandleResponseMixin():
         self.deferred.errback(CIMError(code, error.attrib['DESCRIPTION']))
 
 
-class EnumerateInstances(HandleResponseMixin, BaseEnumerateInstances):
+class EnumerateInstances(HandleResponseMixin, twisted_client.EnumerateInstances):
     pass
 
 
-class EnumerateInstanceNames(HandleResponseMixin, BaseEnumerateInstanceNames):
+class EnumerateInstanceNames(HandleResponseMixin, twisted_client.EnumerateInstanceNames):
     pass
 
 
-class EnumerateClasses(HandleResponseMixin, BaseEnumerateClasses):
+class EnumerateClasses(HandleResponseMixin, twisted_client.EnumerateClasses):
     pass
 
 
-class EnumerateClassNames(HandleResponseMixin, BaseEnumerateClassNames):
+class EnumerateClassNames(HandleResponseMixin, twisted_client.EnumerateClassNames):
+    pass
+
+
+class PullInstances(HandleResponseMixin, twisted_client.PullInstances):
+    pass
+
+
+class OpenEnumerateInstances(HandleResponseMixin, twisted_client.OpenEnumerateInstances):
     pass
 
 
