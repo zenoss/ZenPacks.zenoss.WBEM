@@ -1450,3 +1450,61 @@ def unpack_boolean(p):
         return None
     else:
         raise ParseError('invalid boolean %s' % p)
+
+
+def parse_value_instancewithpath(tt):
+    """
+    Return parsed instancewithpath with name and value as a dict.
+
+    <!ELEMENT VALUE.INSTANCEWITHPATH ((CLASSPATH, CLASS) |
+                                    (INSTANCEPATH, INSTANCE))>
+    """
+
+    check_node(tt, 'VALUE.INSTANCEWITHPATH')
+
+    k = kids(tt)
+
+    if len(k) != 2:
+        raise ParseError('Expecting two elements, got %s' % k)
+
+    if name(k[0]) == 'CLASSPATH':
+        object = (parse_classpath(k[0]),
+                  parse_class(k[1]))
+    else:
+        path = parse_instancepath(k[0])
+        object = parse_instance(k[1])
+
+        object.path = path
+
+    return {name(tt): object}
+
+
+def parse_iter_paramvalue(tt):
+    """Return parsed paramvalue with name and value as a dict."""
+    ## <!ELEMENT PARAMVALUE (VALUE | VALUE.REFERENCE | VALUE.ARRAY |
+    ##                       VALUE.REFARRAY)?>
+    ## <!ATTLIST PARAMVALUE
+    ##   %CIMName;
+    ##   %ParamType;  #IMPLIED
+    ##   %EmbeddedObject;>
+
+    ## Version 2.1.1 of the DTD lacks the %ParamType attribute but it
+    ## is present in version 2.2.  Make it optional to be backwards
+    ## compatible.
+
+    check_node(tt, 'PARAMVALUE', ['NAME'], ['PARAMTYPE', 'EmbeddedObject',
+                                            'EMBEDDEDOBJECT', 'TYPE'])
+
+    child = optional_child(tt,
+                           ['VALUE', 'VALUE.REFERENCE', 'VALUE.ARRAY',
+                            'VALUE.REFARRAY', ])
+
+    if attrs(tt).has_key('PARAMTYPE'):
+        paramtype = attrs(tt)['PARAMTYPE']
+    else:
+        paramtype = None
+
+    if 'EmbeddedObject' in attrs(tt) or 'EMBEDDEDOBJECT' in attrs(tt):
+        child = parse_embeddedObject(child)
+
+    return {attrs(tt)['NAME']: child}

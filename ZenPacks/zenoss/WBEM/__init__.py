@@ -21,6 +21,8 @@ setzPropertyCategory('zWBEMUsername', 'WBEM')
 setzPropertyCategory('zWBEMPassword', 'WBEM')
 setzPropertyCategory('zWBEMUseSSL', 'WBEM')
 setzPropertyCategory('zWBEMRequestTimeout', 'WBEM')
+setzPropertyCategory('zWBEMMaxObjectCount', 'WBEM')
+setzPropertyCategory('zWBEMOperationTimeout', 'WBEM')
 
 
 class ZenPack(ZenPackBase):
@@ -32,4 +34,6 @@ class ZenPack(ZenPackBase):
         ('zWBEMPassword', '', 'password'),
         ('zWBEMUseSSL', True, 'boolean'),
         ('zWBEMRequestTimeout', '290', 'int'),
+        ('zWBEMMaxObjectCount', 0, 'int'),
+        ('zWBEMOperationTimeout', 0, 'int'),
     ]
