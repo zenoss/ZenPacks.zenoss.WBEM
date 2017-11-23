@@ -27,6 +27,8 @@ set to succesfully pull data.
 """
 import itertools
 
+from pywbem.utils import extend_results
+
 from twisted.internet import ssl, reactor
 from twisted.internet.defer import DeferredList, CancelledError
 
@@ -67,7 +69,6 @@ def get_enumerate_instances(creds, classname, namespace=DEFAULT_CIM_NAMESPACE, *
 
 
 class WBEMPlugin(PythonPlugin):
-
     deviceProperties = PythonPlugin.deviceProperties + (
         'zWBEMPort',
         'zWBEMUsername',
@@ -93,9 +94,9 @@ class WBEMPlugin(PythonPlugin):
             log.error("zWBEMPassword empty for %s", device.id)
 
         if not device.manageIp or \
-            not device.zWBEMPort or \
-            not device.zWBEMUsername or \
-            not device.zWBEMPassword:
+                not device.zWBEMPort or \
+                not device.zWBEMUsername or \
+                not device.zWBEMPassword:
             return None
 
         deferreds = []
@@ -131,7 +132,7 @@ class WBEMPlugin(PythonPlugin):
                 wbemClass = EnumerateClasses(userCreds,
                                              namespace=namespace)
 
-            wbemClass.deferred.addCallback(check_if_complete, log,
+            wbemClass.deferred.addCallback(check_if_complete,
                                            device, namespace, classname)
             deferreds.append(wbemClass.deferred)
             create_connection(device, wbemClass)
@@ -152,7 +153,7 @@ class WBEMPlugin(PythonPlugin):
         if len(results) and True not in set(x[0] for x in results):
             log.error('%s WBEM: %s', device.id, result_errmsg(results[0][1]))
 
-            #This will allow for an event to be created by the device class.
+            # This will allow for an event to be created by the device class.
             results = "ERROR", result_errmsg(results[0][1])
 
             return results
@@ -206,26 +207,56 @@ def add_collector_timeout(deferred, seconds):
     return deferred
 
 
-def check_if_complete(results, log, device, namespace, classname, results_aggregator=None):
+def check_if_complete(results, device, namespace, classname,
+                      results_aggregator=None, **kwargs):
     if not results_aggregator:
         results_aggregator = []
 
     if isinstance(results, tuple):
         query_results = results[0]
         enumeration_context = results[2]
-        results_aggregator.append(query_results)
+
+        results_aggregator = extend_aggregated_results(query_results,
+                                                       results_aggregator)
+
         credentials = (device.zWBEMUsername, device.zWBEMPassword)
 
         wbemClass = PullInstances(
-            credentials, namespace, enumeration_context, device.zWBEMMaxObjectCount, classname
+            credentials,
+            namespace,
+            enumeration_context,
+            device.zWBEMMaxObjectCount,
+            classname,
+            **kwargs
         )
-        wbemClass.deferred.addCallback(check_if_complete, log, device,
-                                       namespace, classname, results_aggregator=results_aggregator)
+        wbemClass.deferred.addCallback(
+            check_if_complete,
+            device,
+            namespace,
+            classname,
+            results_aggregator=results_aggregator,
+            **kwargs
+        )
         create_connection(device, wbemClass)
         return wbemClass.deferred
 
-    results_aggregator.append(results)
-    if isinstance(results_aggregator[0], list):
-        results_aggregator = list(itertools.chain.from_iterable(results_aggregator))
+    results_aggregator = extend_aggregated_results(results,
+                                                   results_aggregator)
 
+    if isinstance(results_aggregator, list) and \
+            isinstance(results_aggregator[0], list):
+        results_aggregator = list(
+            itertools.chain.from_iterable(results_aggregator)
+        )
+
+    return results_aggregator
+
+
+def extend_aggregated_results(results, results_aggregator):
+    if isinstance(results, dict):
+        if not results_aggregator:
+            results_aggregator = {}
+        extend_results(results_aggregator, results)
+    else:
+        results_aggregator.append(results)
     return results_aggregator

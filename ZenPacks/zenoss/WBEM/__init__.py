@@ -33,7 +33,7 @@ class ZenPack(ZenPackBase):
         ('zWBEMUsername', '', 'string'),
         ('zWBEMPassword', '', 'password'),
         ('zWBEMUseSSL', True, 'boolean'),
-        ('zWBEMRequestTimeout', '290', 'int'),
+        ('zWBEMRequestTimeout', 290, 'int'),
         ('zWBEMMaxObjectCount', 0, 'int'),
         ('zWBEMOperationTimeout', 0, 'int'),
     ]
