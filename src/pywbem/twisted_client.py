@@ -41,6 +41,8 @@ import string, base64
 from types import StringTypes
 from datetime import datetime, timedelta
 
+from utils import extend_results
+
 
 class WBEMClient(http.HTTPClient):
     """A HTTPClient subclass that handles WBEM requests."""
@@ -309,9 +311,19 @@ class OpenEnumerateInstances(WBEMClientFactory):
         self.classname = classname
         self.namespace = namespace
         self.context = None
+        self.property_filter = (None, None)
+        self.result_component_key = None
 
         if not kwargs.get('MaxObjectCount'):
             kwargs['MaxObjectCount'] = DEFAULT_ITER_MAXOBJECTCOUNT
+
+        if 'PropertyFilter' in kwargs:
+            self.property_filter = kwargs['PropertyFilter']
+            del kwargs['PropertyFilter']
+
+        if 'ResultComponentKey' in kwargs:
+            self.result_component_key = kwargs['ResultComponentKey']
+            del kwargs['ResultComponentKey']
 
         payload = self.imethodcallPayload(
             'OpenEnumerateInstances',
@@ -334,6 +346,7 @@ class OpenEnumerateInstances(WBEMClientFactory):
     def parseResponse(self, xml):
         res = []
         part_results = {}
+        results_for_monitoring = {}
 
         for paramvalue in xml.findall('.//PARAMVALUE'):
             str_paramvalue = tostring(paramvalue)
@@ -344,11 +357,41 @@ class OpenEnumerateInstances(WBEMClientFactory):
             s = tostring(x)
             tt = pywbem.tupletree.xml_to_tupletree(s)
             part_res = pywbem.tupleparse.parse_value_instancewithpath(tt)
-            res.append(part_res['VALUE.INSTANCEWITHPATH'])
+            result_element = part_res['VALUE.INSTANCEWITHPATH']
 
-        part_results.update({'IRETURNVALUE': res})
+            specific_prop_name, _ = self.property_filter
+
+            specific_prop = False
+            if specific_prop_name and specific_prop_name in result_element:
+                specific_prop = result_element[specific_prop_name]
+            if specific_prop:
+                specific_prop_value = None
+                component_identifier = None
+                if specific_prop_name in result_element:
+                    specific_prop_value = str(result_element[specific_prop_name])
+                if self.result_component_key in result_element:
+                    component_identifier = result_element[
+                        self.result_component_key
+                    ]
+
+                monitoring_result = {
+                    self.classname: {
+                        (specific_prop_name, specific_prop_value): {
+                            (self.result_component_key, component_identifier):
+                                result_element
+                        }
+                    }
+                }
+
+                extend_results(results_for_monitoring, monitoring_result)
+            else:
+                res.append(result_element)
+
+        if results_for_monitoring:
+            part_results.update({'IRETURNVALUE': results_for_monitoring})
+        else:
+            part_results.update({'IRETURNVALUE': res})
         return OpenEnumerateInstances._getResultParams(part_results)
-
 
     @staticmethod
     def _getResultParams(result):
@@ -388,13 +431,23 @@ class OpenEnumerateInstances(WBEMClientFactory):
 
 
 class PullInstances(OpenEnumerateInstances):
-    def __init__(self, creds, namespace, enumeration_context, MaxObjectCount, classname):
+    def __init__(self, creds, namespace, EnumerationContext,
+                 MaxObjectCount, classname, **kwargs):
         self.classname = classname
+
+        self.property_filter = (None, None)
+        self.result_component_key = None
+
+        if all(kwargs.get('PropertyFilter', self.property_filter)):
+            self.property_filter = kwargs['PropertyFilter']
+
+        if kwargs.get('ResultComponentKey'):
+            self.result_component_key = kwargs['ResultComponentKey']
 
         payload = self.imethodcallPayload(
             'PullInstancesWithPath',
             namespace,
-            EnumerationContext=enumeration_context,
+            EnumerationContext=EnumerationContext,
             MaxObjectCount=MaxObjectCount
         )
 

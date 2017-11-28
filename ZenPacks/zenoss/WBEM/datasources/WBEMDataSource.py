@@ -11,6 +11,7 @@ import logging
 log = logging.getLogger('zen.WBEM')
 
 import calendar
+import re
 
 from twisted.internet import ssl, reactor, defer
 from twisted.internet.error import TimeoutError
@@ -30,11 +31,27 @@ from Products.Zuul.utils import ZuulMessageFactory as _t
 from ZenPacks.zenoss.PythonCollector.datasources.PythonDataSource \
     import PythonDataSource, PythonDataSourcePlugin
 
-from ZenPacks.zenoss.WBEM.utils import addLocalLibPath, result_errmsg
+from ZenPacks.zenoss.WBEM.modeler.wbem import check_if_complete
+from ZenPacks.zenoss.WBEM.utils import (
+    addLocalLibPath,
+    result_errmsg,
+    create_connection,
+)
 
 addLocalLibPath()
 
-from pywbem.twisted_client import ExecQuery
+from pywbem.twisted_client import (
+    ExecQuery,
+    OpenEnumerateInstances,
+)
+
+CIM_CLASSNAME = re.compile(r'from\s+([\w_]+)', re.I)
+
+
+def get_classname(query):
+    """Extract class name from a CQL query"""
+    match = CIM_CLASSNAME.findall(query)
+    return match[0] if match else ''
 
 
 def string_to_lines(string):
@@ -123,22 +140,39 @@ class WBEMDataSourceInfo(RRDDataSourceInfo):
 
 class WBEMDataSourcePlugin(PythonDataSourcePlugin):
     proxy_attributes = (
-        'zWBEMPort', 'zWBEMUsername', 'zWBEMPassword', 'zWBEMUseSSL', 'zWBEMRequestTimeout'
+        'zWBEMPort',
+        'zWBEMUsername',
+        'zWBEMPassword',
+        'zWBEMUseSSL',
+        'zWBEMRequestTimeout',
+        'zWBEMMaxObjectCount',
+        'zWBEMOperationTimeout',
         )
 
     @classmethod
     def config_key(cls, datasource, context):
         params = cls.params(datasource, context)
+        query = params.get('query', '')
+        if context.zWBEMMaxObjectCount <= 0:
+            return (
+                context.device().id,
+                datasource.getCycleTime(context),
+                datasource.rrdTemplate().id,
+                datasource.id,
+                datasource.plugin_classname,
+                params.get('namespace'),
+                params.get('query_language'),
+                query,
+            )
+
         return (
             context.device().id,
             datasource.getCycleTime(context),
-            datasource.rrdTemplate().id,
-            datasource.id,
             datasource.plugin_classname,
             params.get('namespace'),
             params.get('query_language'),
-            params.get('query'),
-            )
+            get_classname(query),
+        )
 
     @classmethod
     def params(cls, datasource, context):
@@ -160,6 +194,8 @@ class WBEMDataSourcePlugin(PythonDataSourcePlugin):
         params['result_timestamp_key'] = datasource.talesEval(
             datasource.result_timestamp_key, context)
 
+        params['classname'] = get_classname(params['query'])
+
         return params
 
     def collect(self, config):
@@ -168,25 +204,34 @@ class WBEMDataSourcePlugin(PythonDataSourcePlugin):
 
         credentials = (ds0.zWBEMUsername, ds0.zWBEMPassword)
 
-        factory = ExecQuery(
-            credentials,
-            ds0.params['query_language'],
-            ds0.params['query'],
-            namespace=ds0.params['namespace'])
-
-        if ds0.zWBEMUseSSL:
-            reactor.connectSSL(
-                host=ds0.manageIp,
-                port=int(ds0.zWBEMPort),
-                factory=factory,
-                contextFactory=ssl.ClientContextFactory())
+        if ds0.zWBEMMaxObjectCount > 0:
+            property_filter = ds0.params.get('property_filter', (None, None))
+            factory = OpenEnumerateInstances(
+                credentials,
+                namespace=ds0.params['namespace'],
+                classname=ds0.params['classname'],
+                MaxObjectCount=ds0.zWBEMMaxObjectCount,
+                OperationTimeout=ds0.zWBEMOperationTimeout,
+                PropertyFilter=property_filter,
+                ResultComponentKey=ds0.params['result_component_key']
+            )
+            factory.deferred.addCallback(
+                check_if_complete, ds0,
+                ds0.params['namespace'],
+                ds0.params['classname'],
+                PropertyFilter=property_filter,
+                ResultComponentKey=ds0.params['result_component_key']
+            )
         else:
-            reactor.connectTCP(
-                host=ds0.manageIp,
-                port=int(ds0.zWBEMPort),
-                factory=factory)
+            factory = ExecQuery(
+                credentials,
+                ds0.params['query_language'],
+                ds0.params['query'],
+                namespace=ds0.params['namespace'])
 
-        return add_timeout(factory, int(ds0.zWBEMRequestTimeout))
+        create_connection(ds0, factory)
+
+        return add_timeout(factory, ds0.zWBEMRequestTimeout)
 
     def onSuccess(self, results, config):
         data = self.new_data()
@@ -195,7 +240,6 @@ class WBEMDataSourcePlugin(PythonDataSourcePlugin):
         if not isinstance(results, list):
             results = [results]
 
-        ds0 = config.datasources[0]
         log.debug('Monitoring template name: {}'.format(ds0.template))
         log.debug('Monitoring query: {}'.format(ds0.params['query']))
         for instance in results:
