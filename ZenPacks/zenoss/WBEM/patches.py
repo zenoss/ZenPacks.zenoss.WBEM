@@ -40,9 +40,10 @@ class HandleResponseMixin():
         if error is not None:
             msg = error.get('DESCRIPTION')
             if msg and "context cannot be found" in msg:
-                error.set(
-                    'DESCRIPTION',
-                    "Response is not complete for {} classname".format(self.classname)
+                error.set("DESCRIPTION",
+                          "Response is not complete for {} classname. "
+                          "Please check zWBEMOperationTimeout and "
+                          "zWBEMMaxObjectCount properties".format(self.classname)
                 )
         else:
             self.deferred.callback(self.parseResponse(xml))
