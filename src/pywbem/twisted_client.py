@@ -44,6 +44,9 @@ from datetime import datetime, timedelta
 from utils import extend_results
 
 
+protocol.ClientFactory.noisy = False
+
+
 class WBEMClient(http.HTTPClient):
     """A HTTPClient subclass that handles WBEM requests."""
 
