@@ -28,16 +28,23 @@ from twisted.internet import reactor, protocol, defer
 from twisted.web import http, client, error
 
 from pywbem import CIMClass, CIMClassName, CIMInstance, CIMInstanceName, CIMError, CIMDateTime, cim_types, cim_xml, cim_obj
+from cim_constants import CIM_ERR_INVALID_PARAMETER, DEFAULT_ITER_MAXOBJECTCOUNT
 
 try:
     from elementtree.ElementTree import fromstring, tostring
 except ImportError, arg:
     from xml.etree.ElementTree import fromstring, tostring
 
+import six
 import string, base64
 
 from types import StringTypes
 from datetime import datetime, timedelta
+
+from utils import extend_results
+
+
+protocol.ClientFactory.noisy = False
 
 
 class WBEMClient(http.HTTPClient):
@@ -298,6 +305,162 @@ class ExecQuery(WBEMClientFactory):
               for x in xml.findall('.//INSTANCE')]
 
         return [pywbem.tupleparse.parse_instance(x) for x in tt]
+
+
+class OpenEnumerateInstances(WBEMClientFactory):
+    """Factory to produce EnumerateInstances WBEM clients."""
+
+    def __init__(self, creds, classname, namespace='root/cimv2', **kwargs):
+        self.classname = classname
+        self.namespace = namespace
+        self.context = None
+        self.property_filter = (None, None)
+        self.result_component_key = None
+
+        if not kwargs.get('MaxObjectCount'):
+            kwargs['MaxObjectCount'] = DEFAULT_ITER_MAXOBJECTCOUNT
+
+        if 'PropertyFilter' in kwargs:
+            self.property_filter = kwargs['PropertyFilter']
+            del kwargs['PropertyFilter']
+
+        if 'ResultComponentKey' in kwargs:
+            self.result_component_key = kwargs['ResultComponentKey']
+            del kwargs['ResultComponentKey']
+
+        payload = self.imethodcallPayload(
+            'OpenEnumerateInstances',
+            namespace,
+            ClassName=CIMClassName(classname),
+            **kwargs)
+
+        WBEMClientFactory.__init__(
+            self,
+            creds,
+            operation='MethodCall',
+            method='OpenEnumerateInstances',
+            object=namespace,
+            payload=payload)
+
+    def __repr__(self):
+        return '<%s(/%s:%s) at 0x%x>' % \
+               (self.__class__, self.namespace, self.classname, id(self))
+
+    def parseResponse(self, xml):
+        res = []
+        part_results = {}
+        results_for_monitoring = {}
+
+        for paramvalue in xml.findall('.//PARAMVALUE'):
+            str_paramvalue = tostring(paramvalue)
+            tuple_paramvalue = pywbem.tupletree.xml_to_tupletree(str_paramvalue)
+            part_results.update(pywbem.tupleparse.parse_iter_paramvalue(tuple_paramvalue))
+
+        for x in xml.findall('.//VALUE.INSTANCEWITHPATH'):
+            s = tostring(x)
+            tt = pywbem.tupletree.xml_to_tupletree(s)
+            part_res = pywbem.tupleparse.parse_value_instancewithpath(tt)
+            result_element = part_res['VALUE.INSTANCEWITHPATH']
+
+            specific_prop_name, _ = self.property_filter
+
+            specific_prop = False
+            if specific_prop_name and specific_prop_name in result_element:
+                specific_prop = result_element[specific_prop_name]
+            if specific_prop:
+                specific_prop_value = None
+                component_identifier = None
+                if specific_prop_name in result_element:
+                    specific_prop_value = str(result_element[specific_prop_name])
+                if self.result_component_key in result_element:
+                    component_identifier = result_element[
+                        self.result_component_key
+                    ]
+
+                monitoring_result = {
+                    self.classname: {
+                        (specific_prop_name, specific_prop_value): {
+                            (self.result_component_key, component_identifier):
+                                result_element
+                        }
+                    }
+                }
+
+                extend_results(results_for_monitoring, monitoring_result)
+            else:
+                res.append(result_element)
+
+        if results_for_monitoring:
+            part_results.update({'IRETURNVALUE': results_for_monitoring})
+        else:
+            part_results.update({'IRETURNVALUE': res})
+        return OpenEnumerateInstances._getResultParams(part_results)
+
+    @staticmethod
+    def _getResultParams(result):
+        """Common processing for pull results to separate
+           end-of-sequence, enum-context, and entities in IRETURNVALUE.
+           Returns tuple of entities in IRETURNVALUE, end_of_sequence,
+           and enumeration_context)
+        """
+        end_of_sequence = False
+        enumeration_context = None
+
+        sequence = result.get('EndOfSequence')
+        if sequence and isinstance(sequence, six.string_types) and \
+                        sequence.lower() in ['true', 'false']:  # noqa: E125
+            end_of_sequence = sequence.lower() == 'true'
+
+        context = result.get('EnumerationContext')
+        if context and isinstance(context, six.string_types):  # noqa: E125
+            enumeration_context = context
+
+        rtn_objects = result.get('IRETURNVALUE') or []
+
+        if not sequence or not context:
+            raise CIMError(
+                CIM_ERR_INVALID_PARAMETER,
+                "EndOfSequence or EnumerationContext required"
+            )
+
+        # convert enum context if eos is True
+        # Otherwise, returns tuple of enumeration context and namespace
+        rtn_ctxt = None if end_of_sequence else enumeration_context
+
+        if rtn_ctxt:
+            return (rtn_objects, end_of_sequence, rtn_ctxt)
+        else:
+            return rtn_objects
+
+
+class PullInstances(OpenEnumerateInstances):
+    def __init__(self, creds, namespace, EnumerationContext,
+                 MaxObjectCount, classname, **kwargs):
+        self.classname = classname
+
+        self.property_filter = (None, None)
+        self.result_component_key = None
+
+        if all(kwargs.get('PropertyFilter', self.property_filter)):
+            self.property_filter = kwargs['PropertyFilter']
+
+        if kwargs.get('ResultComponentKey'):
+            self.result_component_key = kwargs['ResultComponentKey']
+
+        payload = self.imethodcallPayload(
+            'PullInstancesWithPath',
+            namespace,
+            EnumerationContext=EnumerationContext,
+            MaxObjectCount=MaxObjectCount
+        )
+
+        WBEMClientFactory.__init__(
+            self,
+            creds,
+            operation='MethodCall',
+            method='PullInstancesWithPath',
+            object=None,
+            payload=payload)
 
 
 class EnumerateInstances(WBEMClientFactory):

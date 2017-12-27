@@ -48,3 +48,7 @@ PROVIDERTYPE_INDICATION  = 4
 PROVIDERTYPE_METHOD      = 5
 PROVIDERTYPE_CONSUMER    = 6            # Indication consumer
 PROVIDERTYPE_QUERY       = 7
+
+CIM_ERR_INVALID_PARAMETER = 4
+# Default setting for the MaxObjectCount attribute
+DEFAULT_ITER_MAXOBJECTCOUNT = 1000

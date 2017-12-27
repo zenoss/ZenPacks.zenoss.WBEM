@@ -1,6 +1,6 @@
 ##############################################################################
 #
-# Copyright (C) Zenoss, Inc. 2012, all rights reserved.
+# Copyright (C) Zenoss, Inc. 2012, 2016, 2017, all rights reserved.
 #
 # This content is made available according to terms specified in
 # License.zenoss under the directory where your Zenoss product is installed.
@@ -25,31 +25,57 @@ You must also have the zWBEMPort, zWBEMUsername and zWBEMPassword properties
 set to succesfully pull data.
 
 """
+import itertools
+
+from pywbem.utils import extend_results
 
 from twisted.internet import ssl, reactor
-from twisted.internet.defer import DeferredList
+from twisted.internet.defer import DeferredList, CancelledError
 
 from Products.DataCollector.plugins.CollectorPlugin import PythonPlugin
 
-from ZenPacks.zenoss.WBEM.utils import addLocalLibPath, result_errmsg
+from ZenPacks.zenoss.WBEM.utils import (
+    addLocalLibPath,
+    result_errmsg,
+    create_connection,
+)
 
-addLocalLibPath()
-
-from pywbem.twisted_client import (
+from ZenPacks.zenoss.WBEM.patches import (
     EnumerateClassNames,
     EnumerateClasses,
     EnumerateInstanceNames,
     EnumerateInstances,
+    OpenEnumerateInstances,
+    PullInstances,
 )
+
+addLocalLibPath()
+
+DEFAULT_CIM_NAMESPACE = 'root/cimv2'
+
+
+def get_enumerate_instances(creds, classname, namespace=DEFAULT_CIM_NAMESPACE, **kwargs):
+    """Choose appropriate method based on kwargs and return the instance which implements it."""
+
+    if kwargs.get('MaxObjectCount', 0) > 0 or kwargs.get('OperationTimeout', 0) > 0:
+        klass = OpenEnumerateInstances
+    else:
+        klass = EnumerateInstances
+
+        for unsupported_kwarg in ['MaxObjectCount', 'OperationTimeout']:
+            kwargs.pop(unsupported_kwarg, None)
+
+    return klass(creds, classname, namespace, **kwargs)
 
 
 class WBEMPlugin(PythonPlugin):
-
     deviceProperties = PythonPlugin.deviceProperties + (
         'zWBEMPort',
         'zWBEMUsername',
         'zWBEMPassword',
         'zWBEMUseSSL',
+        'zWBEMMaxObjectCount',
+        'zWBEMOperationTimeout',
     )
 
     wbemQueries = {}
@@ -68,9 +94,9 @@ class WBEMPlugin(PythonPlugin):
             log.error("zWBEMPassword empty for %s", device.id)
 
         if not device.manageIp or \
-            not device.zWBEMPort or \
-            not device.zWBEMUsername or \
-            not device.zWBEMPassword:
+                not device.zWBEMPort or \
+                not device.zWBEMUsername or \
+                not device.zWBEMPassword:
             return None
 
         deferreds = []
@@ -92,8 +118,10 @@ class WBEMPlugin(PythonPlugin):
                     userCreds, namespace=namespace)
 
             elif wbemclass == 'ei':
-                wbemClass = EnumerateInstances(
-                    userCreds, namespace=namespace, classname=classname)
+                wbemClass = get_enumerate_instances(
+                    userCreds, namespace=namespace, classname=classname,
+                    MaxObjectCount=device.zWBEMMaxObjectCount,
+                    OperationTimeout=device.zWBEMOperationTimeout)
 
             elif wbemclass == 'ein':
                 wbemClass = EnumerateInstanceNames(
@@ -104,22 +132,16 @@ class WBEMPlugin(PythonPlugin):
                 wbemClass = EnumerateClasses(userCreds,
                                              namespace=namespace)
 
+            wbemClass.deferred.addCallback(check_if_complete,
+                                           device, namespace, classname)
             deferreds.append(wbemClass.deferred)
-
-            if device.zWBEMUseSSL == True:
-                reactor.connectSSL(
-                    host=device.manageIp,
-                    port=int(device.zWBEMPort),
-                    factory=wbemClass,
-                    contextFactory=ssl.ClientContextFactory())
-            else:
-                reactor.connectTCP(
-                    host=device.manageIp,
-                    port=int(device.zWBEMPort),
-                    factory=wbemClass)
+            create_connection(device, wbemClass)
 
         # Execute the deferreds and return the results to the callback.
         d = DeferredList(deferreds, consumeErrors=True)
+        add_collector_timeout(
+            d, device.zCollectorClientTimeout
+        )
         d.addCallback(self.check_results, device, log)
 
         return d
@@ -131,9 +153,110 @@ class WBEMPlugin(PythonPlugin):
         if len(results) and True not in set(x[0] for x in results):
             log.error('%s WBEM: %s', device.id, result_errmsg(results[0][1]))
 
-            #This will allow for an event to be created by the device class.
+            # This will allow for an event to be created by the device class.
             results = "ERROR", result_errmsg(results[0][1])
 
             return results
 
+        try:
+            results_new = []
+            for success, instances in results:
+                if success:
+                    inst = []
+                    for instance in instances:
+                        inst.append(instance.__dict__)
+                    results_new.append((success, inst))
+                else:
+                    results_new.append((success, instances))
+
+            log.debug('Results: {0}'.format(results_new))
+        except:
+            pass
+
         return results
+
+
+def add_collector_timeout(deferred, seconds):
+    """Raise error on deferred when modeler is timed out."""
+    error = CancelledError("WBEM query timeout")
+
+    def handle_timeout():
+        deferred.cancel()
+
+    def handle_result(result):
+        if timeout_d.active():
+            timeout_d.cancel()
+        if isinstance(result, list):
+            for item in result:
+                if not item[0] and item[1].check(CancelledError):
+                    raise error
+        return result
+
+    def handle_failure(failure):
+        # define this method to catch errors from canceled deferredlist
+        # on Zenoss 4.2.x with Twisted v.11
+        if failure.check(CancelledError):
+            raise error
+
+        return failure
+
+    timeout_d = reactor.callLater(seconds, handle_timeout)
+    deferred.addBoth(handle_result)
+    deferred.addErrback(handle_failure)
+
+    return deferred
+
+
+def check_if_complete(results, device, namespace, classname,
+                      results_aggregator=None, **kwargs):
+    if not results_aggregator:
+        results_aggregator = []
+
+    if isinstance(results, tuple):
+        query_results = results[0]
+        enumeration_context = results[2]
+
+        results_aggregator = extend_aggregated_results(query_results,
+                                                       results_aggregator)
+
+        credentials = (device.zWBEMUsername, device.zWBEMPassword)
+
+        wbemClass = PullInstances(
+            credentials,
+            namespace,
+            enumeration_context,
+            device.zWBEMMaxObjectCount,
+            classname,
+            **kwargs
+        )
+        wbemClass.deferred.addCallback(
+            check_if_complete,
+            device,
+            namespace,
+            classname,
+            results_aggregator=results_aggregator,
+            **kwargs
+        )
+        create_connection(device, wbemClass)
+        return wbemClass.deferred
+
+    results_aggregator = extend_aggregated_results(results,
+                                                   results_aggregator)
+
+    if isinstance(results_aggregator, list) and \
+            isinstance(results_aggregator[0], list):
+        results_aggregator = list(
+            itertools.chain.from_iterable(results_aggregator)
+        )
+
+    return results_aggregator
+
+
+def extend_aggregated_results(results, results_aggregator):
+    if isinstance(results, dict):
+        if not results_aggregator:
+            results_aggregator = {}
+        extend_results(results_aggregator, results)
+    else:
+        results_aggregator.append(results)
+    return results_aggregator

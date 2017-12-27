@@ -1,6 +1,6 @@
 ##############################################################################
 #
-# Copyright (C) Zenoss, Inc. 2012, all rights reserved.
+# Copyright (C) Zenoss, Inc. 2017, all rights reserved.
 #
 # This content is made available according to terms specified in
 # License.zenoss under the directory where your Zenoss product is installed.
@@ -11,12 +11,16 @@ import logging
 log = logging.getLogger('zen.WBEM')
 
 import calendar
+import re
 
-from twisted.internet import threads
+from twisted.internet import ssl, reactor, defer
+from twisted.internet.error import TimeoutError
+from twisted.python import failure
 
 from zope.component import adapts
 from zope.interface import implements
 
+from Products.ZenEvents import ZenEventClasses
 from Products.ZenUtils.Utils import prepId
 from Products.Zuul.form import schema
 from Products.Zuul.infos import ProxyProperty
@@ -27,11 +31,27 @@ from Products.Zuul.utils import ZuulMessageFactory as _t
 from ZenPacks.zenoss.PythonCollector.datasources.PythonDataSource \
     import PythonDataSource, PythonDataSourcePlugin
 
-from ZenPacks.zenoss.WBEM.utils import addLocalLibPath, result_errmsg
+from ZenPacks.zenoss.WBEM.modeler.wbem import check_if_complete
+from ZenPacks.zenoss.WBEM.utils import (
+    addLocalLibPath,
+    result_errmsg,
+    create_connection,
+)
 
 addLocalLibPath()
 
-from pywbem.cim_operations import WBEMConnection
+from pywbem.twisted_client import (
+    ExecQuery,
+    OpenEnumerateInstances,
+)
+
+CIM_CLASSNAME = re.compile(r'from\s+([\w_]+)', re.I)
+
+
+def get_classname(query):
+    """Extract class name from a CQL query"""
+    match = CIM_CLASSNAME.findall(query)
+    return match[0] if match else ''
 
 
 def string_to_lines(string):
@@ -120,22 +140,39 @@ class WBEMDataSourceInfo(RRDDataSourceInfo):
 
 class WBEMDataSourcePlugin(PythonDataSourcePlugin):
     proxy_attributes = (
-        'zWBEMPort', 'zWBEMUsername', 'zWBEMPassword', 'zWBEMUseSSL',
+        'zWBEMPort',
+        'zWBEMUsername',
+        'zWBEMPassword',
+        'zWBEMUseSSL',
+        'zWBEMRequestTimeout',
+        'zWBEMMaxObjectCount',
+        'zWBEMOperationTimeout',
         )
 
     @classmethod
     def config_key(cls, datasource, context):
         params = cls.params(datasource, context)
+        query = params.get('query', '')
+        if context.zWBEMMaxObjectCount <= 0:
+            return (
+                context.device().id,
+                datasource.getCycleTime(context),
+                datasource.rrdTemplate().id,
+                datasource.id,
+                datasource.plugin_classname,
+                params.get('namespace'),
+                params.get('query_language'),
+                query,
+            )
+
         return (
             context.device().id,
             datasource.getCycleTime(context),
-            datasource.rrdTemplate().id,
-            datasource.id,
             datasource.plugin_classname,
             params.get('namespace'),
             params.get('query_language'),
-            params.get('query'),
-            )
+            get_classname(query),
+        )
 
     @classmethod
     def params(cls, datasource, context):
@@ -157,6 +194,8 @@ class WBEMDataSourcePlugin(PythonDataSourcePlugin):
         params['result_timestamp_key'] = datasource.talesEval(
             datasource.result_timestamp_key, context)
 
+        params['classname'] = get_classname(params['query'])
+
         return params
 
     def collect(self, config):
@@ -165,23 +204,49 @@ class WBEMDataSourcePlugin(PythonDataSourcePlugin):
 
         credentials = (ds0.zWBEMUsername, ds0.zWBEMPassword)
 
-        url = '{0}://{1}:{2}'.format(
-            'https' if ds0.zWBEMUseSSL else 'http',
-            ds0.manageIp, ds0.zWBEMPort
-        )
-
-        def _inner():
-            return WBEMConnection(url, credentials).ExecQuery(
+        if ds0.zWBEMMaxObjectCount > 0:
+            property_filter = ds0.params.get('property_filter', (None, None))
+            factory = OpenEnumerateInstances(
+                credentials,
+                namespace=ds0.params['namespace'],
+                classname=ds0.params['classname'],
+                MaxObjectCount=ds0.zWBEMMaxObjectCount,
+                OperationTimeout=ds0.zWBEMOperationTimeout,
+                PropertyFilter=property_filter,
+                ResultComponentKey=ds0.params['result_component_key']
+            )
+            factory.deferred.addCallback(
+                check_if_complete, ds0,
+                ds0.params['namespace'],
+                ds0.params['classname'],
+                PropertyFilter=property_filter,
+                ResultComponentKey=ds0.params['result_component_key']
+            )
+        else:
+            factory = ExecQuery(
+                credentials,
                 ds0.params['query_language'],
                 ds0.params['query'],
                 namespace=ds0.params['namespace'])
-        return threads.deferToThread(_inner)
+
+        create_connection(ds0, factory)
+
+        return add_timeout(factory, ds0.zWBEMRequestTimeout)
 
     def onSuccess(self, results, config):
         data = self.new_data()
+        ds0 = config.datasources[0]
 
         if not isinstance(results, list):
             results = [results]
+
+        log.debug('Monitoring template name: {}'.format(ds0.template))
+        log.debug('Monitoring query: {}'.format(ds0.params['query']))
+        for instance in results:
+            try:
+                log.debug('Monitoring result: {0}'.format(instance.__dict__))
+            except AttributeError:
+                log.debug('Monitoring result is empty')
 
         # Convert datasources to a dictionary with result_component_value as
         # the key. This allows us to avoid an inner loop below.
@@ -190,7 +255,7 @@ class WBEMDataSourcePlugin(PythonDataSourcePlugin):
                 for x in config.datasources)
 
         result_component_key = \
-            config.datasources[0].params['result_component_key']
+            ds0.params['result_component_key']
 
         for result in results:
             if result_component_key:
@@ -201,7 +266,7 @@ class WBEMDataSourcePlugin(PythonDataSourcePlugin):
                     continue
 
             else:
-                datasource = config.datasources[0]
+                datasource = ds0
 
             if result_component_key and result_component_key in result:
                 result_component_value = datasource.params.get(
@@ -235,12 +300,18 @@ class WBEMDataSourcePlugin(PythonDataSourcePlugin):
             'eventKey': 'wbemCollection',
             'summary': 'WBEM: successful collection',
             'device': config.id,
-            })
+            'eventClass': ds0.eventClass,
+            'severity': ZenEventClasses.Clear
+        })
 
         return data
 
     def onError(self, result, config):
         errmsg = 'WBEM: %s' % result_errmsg(result)
+        ds0 = config.datasources[0]
+
+        if isinstance(result, failure.Failure) and isinstance(result.value, defer.CancelledError):
+            errmsg = 'WBEM: %s' % 'request time exceeds value of zWBEMRequestTimeout'
 
         log.error('%s %s', config.id, errmsg)
 
@@ -250,6 +321,35 @@ class WBEMDataSourcePlugin(PythonDataSourcePlugin):
             'eventKey': 'wbemCollection',
             'summary': errmsg,
             'device': config.id,
-            })
+            'severity': ds0.severity,
+            'eventClass': ds0.eventClass
+        })
 
         return data
+
+
+def add_timeout(factory, seconds):
+    """Return new Deferred that will errback TimeoutError after seconds."""
+    deferred_with_timeout = defer.Deferred()
+    deferred = factory.deferred
+
+    def fire_timeout():
+        deferred.cancel()
+        if not deferred_with_timeout.called:
+            deferred_with_timeout.errback(failure.Failure(TimeoutError()))
+
+    delayed_timeout = reactor.callLater(seconds, fire_timeout)
+    factory.deferred_timeout = delayed_timeout
+
+    def handle_result(result):
+        if delayed_timeout.active():
+            delayed_timeout.cancel()
+
+        if not deferred_with_timeout.called:
+            if isinstance(result, failure.Failure):
+                deferred_with_timeout.errback(result)
+            else:
+                deferred_with_timeout.callback(result)
+
+    deferred.addBoth(handle_result)
+    return deferred_with_timeout

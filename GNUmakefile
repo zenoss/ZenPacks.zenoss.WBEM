@@ -13,6 +13,10 @@ PYWBEM_DIR=$(HERE)/src/pywbem
 ZP_DIR=$(HERE)/ZenPacks/zenoss/WBEM
 LIB_DIR=$(ZP_DIR)/lib
 BIN_DIR=$(ZP_DIR)/bin
+DOC_DIR=$(HERE)/docs
+
+.PHONY: docs
+
 
 default: egg
 
@@ -33,3 +37,6 @@ clean:
 
 test:
 	runtests -v ZenPacks.zenoss.WBEM
+
+docs:
+	make -C $(DOC_DIR)
