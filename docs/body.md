@@ -13,6 +13,13 @@ active subscription.
 Releases
 --------
 
+Version 2.0.0- [Download](http://wiki.zenoss.org/download/zenpacks/ZenPacks.zenoss.WBEM/2.0.0/ZenPacks.zenoss.WBEM-2.0.0.egg){.external}
+:   Released on 2017/12/27
+:   Requires [PythonCollector ZenPack](/product/zenpacks/pythoncollector "ZenPack:PythonCollector")
+:   Compatible with Zenoss Core 4.2.x, Zenoss Core 5.x.x, Zenoss
+    Resource Manager 4.2.x, Zenoss Resource Manager 5.x.x, Zenoss Core 6.x.x, Zenoss Resource Manager 6.x.x
+
+
 Version 1.0.3- [Download](http://wiki.zenoss.org/download/zenpacks/ZenPacks.zenoss.WBEM/1.0.3/ZenPacks.zenoss.WBEM-1.0.3.egg){.external}
 :   Released on 2015/09/11
 :   Requires [PythonCollector ZenPack](/product/zenpacks/pythoncollector "ZenPack:PythonCollector")
@@ -166,4 +173,14 @@ Core users can use the *#zenoss* IRC channel or the [Zenoss Community Forums](ht
 
 Please check *zWBEMMaxObjectCount*, *zWBEMOperationTimeout*, and *zWBEMRequestTimeout* zProperties documentation 
 and adjust the vaules
+
+Changes
+-------
+
+2.0.0
+
+-   Add optional pull instance operations during modeling (ZPS-2450)
+-   Add optional pull instance operations during monitoring (ZPS-2533)
+-   Fix memory leak in zenpython (ZPS-2742)
+-   Tested with Zenoss Resource Manager 6.0.1, Zenoss Resource Manager 6.1.0, Zenoss Resource Manager 5.3.3, Zenoss Resource Manager 4.2.5 RPS 743 and Service Impact 5.2.3
 
