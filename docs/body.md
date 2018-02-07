@@ -176,6 +176,9 @@ and adjust the vaules
 
 Changes
 -------
+2.0.1
+
+- Add possibility to check monitoring data by multiple fields (ZPS-2817)
 
 2.0.0
 
