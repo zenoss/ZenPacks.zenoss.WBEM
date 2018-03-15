@@ -1,6 +1,6 @@
 ##############################################################################
 #
-# Copyright (C) Zenoss, Inc. 2017, all rights reserved.
+# Copyright (C) Zenoss, Inc. 2017,2018 all rights reserved.
 #
 # This content is made available according to terms specified in
 # License.zenoss under the directory where your Zenoss product is installed.
@@ -30,18 +30,16 @@ from Products.Zuul.utils import ZuulMessageFactory as _t
 from ZenPacks.zenoss.PythonCollector.datasources.PythonDataSource \
     import PythonDataSource, PythonDataSourcePlugin
 
-from ZenPacks.zenoss.WBEM.modeler.wbem import check_if_complete
 from ZenPacks.zenoss.WBEM.utils import (
     addLocalLibPath,
     result_errmsg,
-    create_connection,
     convert_to_timestamp,
 )
 
 addLocalLibPath()
 
 from pywbem import CIMDateTime
-from pywbem.twisted_client import (
+from pywbem.twisted_agent import (
     ExecQuery,
     OpenEnumerateInstances,
 )
@@ -211,6 +209,9 @@ class WBEMDataSourcePlugin(PythonDataSourcePlugin):
                 credentials,
                 namespace=ds0.params['namespace'],
                 classname=ds0.params['classname'],
+                host=config.manageIp,
+                port=ds0.zWBEMPort,
+                ssl=ds0.zWBEMUseSSL,
                 MaxObjectCount=ds0.zWBEMMaxObjectCount,
                 OperationTimeout=ds0.zWBEMOperationTimeout,
                 PropertyFilter=property_filter,
@@ -228,9 +229,10 @@ class WBEMDataSourcePlugin(PythonDataSourcePlugin):
                 credentials,
                 ds0.params['query_language'],
                 ds0.params['query'],
+                config.manageIp,
+                ds0.zWBEMPort,
+                ds0.zWBEMUseSSL,
                 namespace=ds0.params['namespace'])
-
-        create_connection(ds0, factory)
 
         return add_timeout(factory, ds0.zWBEMRequestTimeout)
 
