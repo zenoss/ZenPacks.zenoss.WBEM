@@ -205,7 +205,7 @@ class WBEMPlugin(PythonPlugin):
                     userCreds, namespace=namespace)
 
             elif wbemclass == 'ei':
-                wbemClass = self.get_enumerate_instances(
+                wbemClass = get_enumerate_instances(
                     userCreds, namespace=namespace,
                     host=device.manageIp, port=device.zWBEMPort,
                     ssl=device.zWBEMUseSSL,

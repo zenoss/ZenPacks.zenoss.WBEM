@@ -23,6 +23,14 @@ from StringIO import StringIO
 from twisted.internet.ssl import ClientContextFactory
 
 
+class WBEMClientContextFactory(ClientContextFactory):
+    """
+    Need this to avoid error: getContext() takes exactly 1 argument (3 given)
+    """
+    def getContext(self, hostname, port):
+        # FIXME: no attempt to verify certificates!
+        return ClientContextFactory.getContext(self)
+
 class BaseWBEMMethod(object):
     """Create instances of the WBEMClient class."""
 
@@ -410,7 +418,7 @@ class EnumerateInstances(BaseWBEMMethod):
         url = self.build_url(self.use_ssl, self.host, self.port)
         if self.use_ssl:
             # TODO  build SSL factory
-            contextFactory = ClientContextFactory()
+            contextFactory = WBEMClientContextFactory()
             agent = Agent(reactor, contextFactory)
 
         else:
