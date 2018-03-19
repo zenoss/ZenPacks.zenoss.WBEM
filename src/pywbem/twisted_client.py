@@ -155,15 +155,16 @@ class BaseWBEMMethod(object):
         error = xml.find('.//ERROR')
 
         if error is None:
-            self.deferred.callback(self.parseResponse(xml))
-            return
+            #self.deferred.callback(self.parseResponse())
+            return xml
 
         try:
             code = int(error.attrib['CODE'])
         except ValueError:
             code = 0
 
-        self.deferred.errback(CIMError(code, error.attrib['DESCRIPTION']))
+        #self.deferred.errback(CIMError(code, error.attrib['DESCRIPTION']))
+        raise CIMError(code, error.attrib['DESCRIPTION'])
 
     def get_headers(self, creds, cim_method, namespace):
         """
@@ -208,10 +209,11 @@ class BaseWBEMMethod(object):
 import pywbem.tupletree
 
 class ExecQuery(BaseWBEMMethod):
-    def __init__(self, creds, QueryLanguage, Query, namespace = 'root/cimv2'):
+    def __init__(self, creds, QueryLanguage, Query, host, port, ssl, namespace = 'root/cimv2'):
         self.QueryLanguage = QueryLanguage
         self.Query = Query
         self.namespace = namespace
+        self.cim_method = "ExecQuery"
 
         payload = self.imethodcallPayload(
             'ExecQuery',
@@ -219,13 +221,32 @@ class ExecQuery(BaseWBEMMethod):
             QueryLanguage = QueryLanguage,
             Query = Query)
 
-        BaseWBEMMethod.__init__(
-            self,
-            creds,
-            operation = 'MethodCall',
-            method = 'ExecQuery',
-            object = namespace,
-            payload = payload)
+        headers = self.get_headers(creds, self.cim_method, self.namespace)
+        body = FileBodyProducer(StringIO(str(payload)))
+
+        url = self.build_url(ssl, host, port)
+        if ssl:
+            # TODO  build SSL factory
+            contextFactory = WBEMClientContextFactory()
+            agent = Agent(reactor, contextFactory)
+
+        else:
+            agent = Agent(reactor)
+        self.deferred = agent.request('POST', url, headers, body)
+        self.deferred.addCallback(self.cbResponse)
+        self.deferred.addCallback(self.parseErrorAndResponse)
+        self.deferred.addCallback(self.parseResponse)
+        self.deferred.addErrback(self.error)
+
+    def cbResponse(self, res):
+        d = readBody(res)
+        return d
+
+    def read_body(self, result):
+        return result
+
+    def error(self, err):
+        return err
 
     def __repr__(self):
         return '<%s(/%s:%s) at 0x%x>' % \

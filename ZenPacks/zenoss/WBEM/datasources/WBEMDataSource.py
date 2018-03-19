@@ -227,9 +227,10 @@ class WBEMDataSourcePlugin(PythonDataSourcePlugin):
                 credentials,
                 ds0.params['query_language'],
                 ds0.params['query'],
+                config.manageIp,
+                ds0.zWBEMPort,
+                ds0.zWBEMUseSSL,
                 namespace=ds0.params['namespace'])
-
-        create_connection(ds0, factory)
 
         return add_timeout(factory, ds0.zWBEMRequestTimeout)
 
