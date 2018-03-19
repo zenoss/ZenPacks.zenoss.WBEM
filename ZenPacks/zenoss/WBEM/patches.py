@@ -45,7 +45,6 @@ class HandleResponseMixin():
                           "zWBEMMaxObjectCount properties".format(self.classname)
                 )
         else:
-            #self.deferred.callback(self.parseResponse(xml))
             return xml
 
         try:

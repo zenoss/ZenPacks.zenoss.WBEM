@@ -155,7 +155,6 @@ class BaseWBEMMethod(object):
         error = xml.find('.//ERROR')
 
         if error is None:
-            #self.deferred.callback(self.parseResponse())
             return xml
 
         try:
@@ -163,7 +162,6 @@ class BaseWBEMMethod(object):
         except ValueError:
             code = 0
 
-        #self.deferred.errback(CIMError(code, error.attrib['DESCRIPTION']))
         raise CIMError(code, error.attrib['DESCRIPTION'])
 
     def get_headers(self, creds, cim_method, namespace):
@@ -242,9 +240,6 @@ class ExecQuery(BaseWBEMMethod):
         d = readBody(res)
         return d
 
-    def read_body(self, result):
-        return result
-
     def error(self, err):
         return err
 
@@ -262,9 +257,10 @@ class ExecQuery(BaseWBEMMethod):
 class OpenEnumerateInstances(BaseWBEMMethod):
     """Factory to produce EnumerateInstances WBEM clients."""
 
-    def __init__(self, creds, classname, namespace='root/cimv2', **kwargs):
+    def __init__(self, creds, classname, host, port, ssl, namespace='root/cimv2', **kwargs):
         self.classname = classname
         self.namespace = namespace
+        self.cim_method = "OpenEnumerateInstances"
         self.context = None
         self.property_filter = (None, None)
         self.result_component_key = None
@@ -281,18 +277,32 @@ class OpenEnumerateInstances(BaseWBEMMethod):
             del kwargs['ResultComponentKey']
 
         payload = self.imethodcallPayload(
-            'OpenEnumerateInstances',
+            self.cim_method,
             namespace,
             ClassName=CIMClassName(classname),
             **kwargs)
+        headers = self.get_headers(creds, self.cim_method, self.namespace)
+        body = FileBodyProducer(StringIO(str(payload)))
+        url = self.build_url(ssl, host, port)
+        if ssl:
+            # TODO  build SSL factory
+            contextFactory = WBEMClientContextFactory()
+            agent = Agent(reactor, contextFactory)
 
-        BaseWBEMMethod.__init__(
-            self,
-            creds,
-            operation='MethodCall',
-            method='OpenEnumerateInstances',
-            object=namespace,
-            payload=payload)
+        else:
+            agent = Agent(reactor)
+        self.deferred = agent.request('POST', url, headers, body)
+        self.deferred.addCallback(self.cbResponse)
+        self.deferred.addCallback(self.parseErrorAndResponse)
+        self.deferred.addCallback(self.parseResponse)
+        self.deferred.addErrback(self.error)
+
+    def cbResponse(self, res):
+        d = readBody(res)
+        return d
+
+    def error(self, err):
+        return err
 
     def __repr__(self):
         return '<%s(/%s:%s) at 0x%x>' % \
@@ -386,10 +396,10 @@ class OpenEnumerateInstances(BaseWBEMMethod):
 
 
 class PullInstances(OpenEnumerateInstances):
-    def __init__(self, creds, namespace, EnumerationContext,
+    def __init__(self, creds, namespace, host, port, ssl, EnumerationContext,
                  MaxObjectCount, classname, **kwargs):
         self.classname = classname
-
+        self.cim_method = "PullInstancesWithPath"
         self.property_filter = (None, None)
         self.result_component_key = None
 
@@ -400,20 +410,26 @@ class PullInstances(OpenEnumerateInstances):
             self.result_component_key = kwargs['ResultComponentKey']
 
         payload = self.imethodcallPayload(
-            'PullInstancesWithPath',
+            self.cim_method,
             namespace,
             EnumerationContext=EnumerationContext,
             MaxObjectCount=MaxObjectCount
         )
+        headers = self.get_headers(creds, self.cim_method, self.namespace)
+        body = FileBodyProducer(StringIO(str(payload)))
+        url = self.build_url(ssl, host, port)
+        if ssl:
+            # TODO  build SSL factory
+            contextFactory = WBEMClientContextFactory()
+            agent = Agent(reactor, contextFactory)
 
-        BaseWBEMMethod.__init__(
-            self,
-            creds,
-            operation='MethodCall',
-            method='PullInstancesWithPath',
-            object=None,
-            payload=payload)
-
+        else:
+            agent = Agent(reactor)
+        self.deferred = agent.request('POST', url, headers, body)
+        self.deferred.addCallback(self.cbResponse)
+        self.deferred.addCallback(self.parseErrorAndResponse)
+        self.deferred.addCallback(self.parseResponse)
+        self.deferred.addErrback(self.error)
 
 class EnumerateInstances(BaseWBEMMethod):
     """Factory to produce EnumerateInstances WBEM clients."""
