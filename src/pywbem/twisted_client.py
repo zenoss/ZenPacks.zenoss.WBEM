@@ -1,3 +1,12 @@
+##############################################################################
+#
+# Copyright (C) Zenoss, Inc. 2018, all rights reserved.
+#
+# This content is made available according to terms specified in
+# License.zenoss under the directory where your Zenoss product is installed.
+#
+##############################################################################
+
 from base64 import b64encode
 from twisted.internet import reactor, defer
 
@@ -44,8 +53,6 @@ class BaseWBEMMethod(object):
         self.method = method
         self.object = object
         self.payload = payload
-        #self.protocol = lambda: WBEMClient()
-        self.deferred = defer.Deferred()
 
     def imethodcallPayload(self, methodname, localnsp, **kwargs):
         """Generate the XML payload for an intrinsic methodcall."""
@@ -170,8 +177,7 @@ class BaseWBEMMethod(object):
         headers_dict = {'CIMOperation': ['MethodCall'],
                         'CIMMethod': [cim_method],
                         'Content-type': ['application/xml; charset="utf-8"'],
-                        'CIMObject': [namespace],
-                        'Content-type': ['application/xml; charset="utf-8"']}
+                        'CIMObject': [namespace]}
 
         headers = Headers(headers_dict)
         auth_string = b64encode('%s:%s' % (creds[0], creds[1]))
@@ -403,9 +409,6 @@ class EnumerateInstances(BaseWBEMMethod):
         self.classname = classname
         self.namespace = namespace
         self.cim_method = "EnumerateInstances"
-        self.host = host
-        self.port = port
-        self.use_ssl = ssl
         payload = self.imethodcallPayload(
             self.cim_method,
             namespace,
@@ -415,8 +418,8 @@ class EnumerateInstances(BaseWBEMMethod):
         body = FileBodyProducer(StringIO(str(payload)))
         #check if ssl
         #create context fsctory for Agent
-        url = self.build_url(self.use_ssl, self.host, self.port)
-        if self.use_ssl:
+        url = self.build_url(ssl, host, port)
+        if ssl:
             # TODO  build SSL factory
             contextFactory = WBEMClientContextFactory()
             agent = Agent(reactor, contextFactory)

@@ -129,7 +129,6 @@ def check_if_complete(results, device, namespace, classname,
             results_aggregator=results_aggregator,
             **kwargs
         )
-        create_connection(device, wbemClass)
         return wbemClass.deferred
 
     results_aggregator = extend_aggregated_results(results,
