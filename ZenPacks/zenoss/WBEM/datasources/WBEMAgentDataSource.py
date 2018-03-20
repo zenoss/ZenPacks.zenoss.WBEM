@@ -62,15 +62,15 @@ def string_to_lines(string):
     return None
 
 
-class WBEMDataSource(PythonDataSource):
+class WBEMAgentDataSource(PythonDataSource):
     """Datasource used to capture datapoints from WBEM providers."""
 
     ZENPACKID = 'ZenPacks.zenoss.WBEM'
 
-    sourcetypes = ('WBEM',)
+    sourcetypes = ('WBEMAgent',)
     sourcetype = sourcetypes[0]
 
-    plugin_classname = 'ZenPacks.zenoss.WBEM.datasources.WBEMDataSource.WBEMDataSourcePlugin'
+    plugin_classname = 'ZenPacks.zenoss.WBEM.datasources.WBEMAgentDataSource.WBEMAgentDataSourcePlugin'
 
     namespace = ''
     query_language = 'CQL'  # hard-coded for now.
@@ -89,7 +89,7 @@ class WBEMDataSource(PythonDataSource):
         )
 
 
-class IWBEMDataSourceInfo(IRRDDataSourceInfo):
+class IWBEMAgentDataSourceInfo(IRRDDataSourceInfo):
     cycletime = schema.TextLine(
         title=_t(u'Cycle Time (seconds)'))
 
@@ -115,9 +115,9 @@ class IWBEMDataSourceInfo(IRRDDataSourceInfo):
         title=_t(u'Result Timestamp Key'))
 
 
-class WBEMDataSourceInfo(RRDDataSourceInfo):
-    implements(IWBEMDataSourceInfo)
-    adapts(WBEMDataSource)
+class WBEMDAgentataSourceInfo(RRDDataSourceInfo):
+    implements(IWBEMAgentDataSourceInfo)
+    adapts(WBEMAgentDataSource)
 
     testable = False
 
@@ -137,7 +137,7 @@ class WBEMDataSourceInfo(RRDDataSourceInfo):
         self._object.query = string_to_lines(val)
 
 
-class WBEMDataSourcePlugin(PythonDataSourcePlugin):
+class WBEMAgentDataSourcePlugin(PythonDataSourcePlugin):
     proxy_attributes = (
         'zWBEMPort',
         'zWBEMUsername',
