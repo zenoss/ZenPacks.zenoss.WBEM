@@ -115,7 +115,7 @@ class IWBEMAgentDataSourceInfo(IRRDDataSourceInfo):
         title=_t(u'Result Timestamp Key'))
 
 
-class WBEMDAgentataSourceInfo(RRDDataSourceInfo):
+class WBEMAgentDataSourceInfo(RRDDataSourceInfo):
     implements(IWBEMAgentDataSourceInfo)
     adapts(WBEMAgentDataSource)
 
