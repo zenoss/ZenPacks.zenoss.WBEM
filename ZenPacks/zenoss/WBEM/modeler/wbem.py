@@ -49,13 +49,12 @@ from ZenPacks.zenoss.WBEM.patches import (
     PullInstances,
 )
 
-
 addLocalLibPath()
 
 DEFAULT_CIM_NAMESPACE = 'root/cimv2'
 
-def get_enumerate_instances(creds, classname, host, port, ssl,
-                            namespace=DEFAULT_CIM_NAMESPACE, **kwargs):
+
+def get_enumerate_instances(creds, classname, namespace=DEFAULT_CIM_NAMESPACE, **kwargs):
     """Choose appropriate method based on kwargs and return the instance which implements it."""
 
     if kwargs.get('MaxObjectCount', 0) > 0 or kwargs.get('OperationTimeout', 0) > 0:
@@ -66,7 +65,116 @@ def get_enumerate_instances(creds, classname, host, port, ssl,
         for unsupported_kwarg in ['MaxObjectCount', 'OperationTimeout']:
             kwargs.pop(unsupported_kwarg, None)
 
-    return klass(creds, classname, host, port, ssl, namespace, **kwargs)
+    return klass(creds, classname, namespace, **kwargs)
+
+
+class WBEMPlugin(PythonPlugin):
+    deviceProperties = PythonPlugin.deviceProperties + (
+        'zWBEMPort',
+        'zWBEMUsername',
+        'zWBEMPassword',
+        'zWBEMUseSSL',
+        'zWBEMMaxObjectCount',
+        'zWBEMOperationTimeout',
+    )
+
+    wbemQueries = {}
+
+    def collect(self, device, log):
+        if not device.manageIp:
+            log.error('%s has no management IP address', device.id)
+
+        if not device.zWBEMPort:
+            log.error("zWBEMPort empty for %s", device.id)
+
+        if not device.zWBEMUsername:
+            log.error("zWBEMUsername empty for %s", device.id)
+
+        if not device.zWBEMPassword:
+            log.error("zWBEMPassword empty for %s", device.id)
+
+        if not device.manageIp or \
+                not device.zWBEMPort or \
+                not device.zWBEMUsername or \
+                not device.zWBEMPassword:
+            return None
+
+        deferreds = []
+
+        for wbemnamespace, wbemclass in self.wbemQueries.items():
+            namespaces = wbemnamespace.split(":")
+            namespace = namespaces[0]
+            if len(namespaces) > 1:
+                classname = namespaces[1]
+
+            userCreds = (device.zWBEMUsername, device.zWBEMPassword)
+
+            if wbemclass == 'ec':
+                wbemClass = EnumerateClasses(
+                    userCreds, namespace=namespace)
+
+            elif wbemclass == 'ecn':
+                wbemClass = EnumerateClassNames(
+                    userCreds, namespace=namespace)
+
+            elif wbemclass == 'ei':
+                wbemClass = get_enumerate_instances(
+                    userCreds, namespace=namespace, classname=classname,
+                    MaxObjectCount=device.zWBEMMaxObjectCount,
+                    OperationTimeout=device.zWBEMOperationTimeout)
+
+            elif wbemclass == 'ein':
+                wbemClass = EnumerateInstanceNames(
+                    userCreds, namespace=namespace, classname=classname)
+
+            else:
+                log.warn('Incorrect class call %s', wbemclass)
+                wbemClass = EnumerateClasses(userCreds,
+                                             namespace=namespace)
+
+            wbemClass.deferred.addCallback(check_if_complete,
+                                           device, namespace, classname)
+            deferreds.append(wbemClass.deferred)
+            create_connection(device, wbemClass)
+
+        # Execute the deferreds and return the results to the callback.
+        d = DeferredList(deferreds, consumeErrors=True)
+        add_collector_timeout(
+            d, device.zCollectorClientTimeout
+        )
+        d.addCallback(self.check_results, device, log)
+
+        return d
+
+    def check_results(self, results, device, log):
+        """Check results for errors."""
+
+        # If all results are failures we have a problem to report.
+        if len(results) and True not in set(x[0] for x in results):
+            log.error('%s WBEM: %s', device.id, result_errmsg(results[0][1]))
+
+            # This will allow for an event to be created by the device class.
+            results = "ERROR", result_errmsg(results[0][1])
+
+            return results
+
+        try:
+            results_new = []
+            for success, instances in results:
+                if success:
+                    inst = []
+                    for instance in instances:
+                        inst.append(instance.__dict__)
+                    results_new.append((success, inst))
+                else:
+                    results_new.append((success, instances))
+
+            log.debug('Results: {0}'.format(results_new))
+        except:
+            pass
+
+        return results
+
 
 def add_collector_timeout(deferred, seconds):
     """Raise error on deferred when modeler is timed out."""
@@ -112,13 +220,10 @@ def check_if_complete(results, device, namespace, classname,
                                                        results_aggregator)
 
         credentials = (device.zWBEMUsername, device.zWBEMPassword)
-        # TODO migrate to twisted.Agent
+
         wbemClass = PullInstances(
             credentials,
             namespace,
-            device.manageIp,
-            device.zWBEMPort,
-            device.zWBEMUseSSL,
             enumeration_context,
             device.zWBEMMaxObjectCount,
             classname,
@@ -132,6 +237,7 @@ def check_if_complete(results, device, namespace, classname,
             results_aggregator=results_aggregator,
             **kwargs
         )
+        create_connection(device, wbemClass)
         return wbemClass.deferred
 
     results_aggregator = extend_aggregated_results(results,
@@ -154,115 +260,3 @@ def extend_aggregated_results(results, results_aggregator):
     else:
         results_aggregator.append(results)
     return results_aggregator
-
-class WBEMPlugin(PythonPlugin):
-    deviceProperties = PythonPlugin.deviceProperties + (
-        'zWBEMPort',
-        'zWBEMUsername',
-        'zWBEMPassword',
-        'zWBEMUseSSL',
-        'zWBEMMaxObjectCount',
-        'zWBEMOperationTimeout',
-    )
-
-    wbemQueries = {}
-
-
-    def collect(self, device, log):
-        if not device.manageIp:
-            log.error('%s has no management IP address', device.id)
-
-        if not device.zWBEMPort:
-            log.error("zWBEMPort empty for %s", device.id)
-
-        if not device.zWBEMUsername:
-            log.error("zWBEMUsername empty for %s", device.id)
-
-        if not device.zWBEMPassword:
-            log.error("zWBEMPassword empty for %s", device.id)
-
-        if not device.manageIp or \
-                not device.zWBEMPort or \
-                not device.zWBEMUsername or \
-                not device.zWBEMPassword:
-            return None
-
-        deferreds = []
-        for wbemnamespace, wbemclass in self.wbemQueries.items():
-            namespaces = wbemnamespace.split(":")
-            namespace = namespaces[0]
-            if len(namespaces) > 1:
-                classname = namespaces[1]
-
-            userCreds = (device.zWBEMUsername, device.zWBEMPassword)
-
-            if wbemclass == 'ec':
-                # TODO migrate to twisted.Agent
-                wbemClass = EnumerateClasses(
-                    userCreds, namespace=namespace)
-
-            elif wbemclass == 'ecn':
-                # TODO migrate to twisted.Agent
-                wbemClass = EnumerateClassNames(
-                    userCreds, namespace=namespace)
-
-            elif wbemclass == 'ei':
-                wbemClass = get_enumerate_instances(
-                    userCreds, namespace=namespace,
-                    host=device.manageIp, port=device.zWBEMPort,
-                    ssl=device.zWBEMUseSSL,
-                    classname=classname,
-                    MaxObjectCount=device.zWBEMMaxObjectCount,
-                    OperationTimeout=device.zWBEMOperationTimeout)
-
-            elif wbemclass == 'ein':
-                # TODO migrate to twisted.Agent
-                wbemClass = EnumerateInstanceNames(
-                    userCreds, namespace=namespace, classname=classname)
-
-            else:
-                log.warn('Incorrect class call %s', wbemclass)
-                wbemClass = EnumerateClasses(userCreds,
-                                             namespace=namespace)
-
-            wbemClass.deferred.addCallback(check_if_complete,
-                                           device, namespace, classname)
-            deferreds.append(wbemClass.deferred)
-
-        # Execute the deferreds and return the results to the callback.
-        d = DeferredList(deferreds, consumeErrors=True)
-        add_collector_timeout(
-            d, device.zCollectorClientTimeout
-        )
-        d.addCallback(self.check_results, device, log)
-
-        return d
-
-    def check_results(self, results, device, log):
-        """Check results for errors."""
-
-        # If all results are failures we have a problem to report.
-        if len(results) and True not in set(x[0] for x in results):
-            log.error('%s WBEM: %s', device.id, result_errmsg(results[0][1]))
-
-            # This will allow for an event to be created by the device class.
-            results = "ERROR", result_errmsg(results[0][1])
-
-            return results
-
-        try:
-            results_new = []
-            for success, instances in results:
-                if success:
-                    inst = []
-                    for instance in instances:
-                        inst.append(instance.__dict__)
-                    results_new.append((success, inst))
-                else:
-                    results_new.append((success, instances))
-
-            log.debug('Results: {0}'.format(results_new))
-        except:
-            pass
-
-        return results

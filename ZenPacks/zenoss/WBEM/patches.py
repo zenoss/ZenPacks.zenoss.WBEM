@@ -28,11 +28,12 @@ class HandleResponseMixin():
         try:
             xml = fromstring(data)
         except Exception:
-            raise (
+            self.deferred.errback(
                 CIMError(
                     0, 'Incorrect XML response for {0}'.format(self.classname)
                 )
             )
+            return
 
         error = xml.find('.//ERROR')
 
@@ -45,14 +46,15 @@ class HandleResponseMixin():
                           "zWBEMMaxObjectCount properties".format(self.classname)
                 )
         else:
-            return xml
+            self.deferred.callback(self.parseResponse(xml))
+            return
 
         try:
             code = int(error.attrib['CODE'])
         except ValueError:
             code = 0
 
-        raise (CIMError(code, error.attrib['DESCRIPTION']))
+        self.deferred.errback(CIMError(code, error.attrib['DESCRIPTION']))
 
 
 class EnumerateInstances(HandleResponseMixin, twisted_client.EnumerateInstances):
@@ -78,3 +80,18 @@ class PullInstances(HandleResponseMixin, twisted_client.PullInstances):
 class OpenEnumerateInstances(HandleResponseMixin, twisted_client.OpenEnumerateInstances):
     pass
 
+
+class NewWBEMClient(object, twisted_client.WBEMClient):
+
+    def rawDataReceived(self, data):
+        """
+        Override this method to cancel deferred timeout
+        in case we got some response from resource side.
+        """
+        if hasattr(self.factory, 'deferred_timeout'):
+            if self.factory.deferred_timeout.active():
+                self.factory.deferred_timeout.cancel()
+        super(NewWBEMClient, self).rawDataReceived(data)
+
+
+twisted_client.WBEMClient = NewWBEMClient
