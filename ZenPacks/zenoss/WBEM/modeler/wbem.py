@@ -1,6 +1,6 @@
 ##############################################################################
 #
-# Copyright (C) Zenoss, Inc. 2012, 2016, 2017, all rights reserved.
+# Copyright (C) Zenoss, Inc. 2012, 2016, 2017, 2018 all rights reserved.
 #
 # This content is made available according to terms specified in
 # License.zenoss under the directory where your Zenoss product is installed.
@@ -37,10 +37,9 @@ from Products.DataCollector.plugins.CollectorPlugin import PythonPlugin
 from ZenPacks.zenoss.WBEM.utils import (
     addLocalLibPath,
     result_errmsg,
-    create_connection,
 )
 
-from ZenPacks.zenoss.WBEM.patches import (
+from ZenPacks.zenoss.WBEM.patches_agent import (
     EnumerateClassNames,
     EnumerateClasses,
     EnumerateInstanceNames,
@@ -54,7 +53,8 @@ addLocalLibPath()
 DEFAULT_CIM_NAMESPACE = 'root/cimv2'
 
 
-def get_enumerate_instances(creds, classname, namespace=DEFAULT_CIM_NAMESPACE, **kwargs):
+def get_enumerate_instances(creds, classname, host, port, ssl,
+                            namespace=DEFAULT_CIM_NAMESPACE, **kwargs):
     """Choose appropriate method based on kwargs and return the instance which implements it."""
 
     if kwargs.get('MaxObjectCount', 0) > 0 or kwargs.get('OperationTimeout', 0) > 0:
@@ -65,7 +65,7 @@ def get_enumerate_instances(creds, classname, namespace=DEFAULT_CIM_NAMESPACE, *
         for unsupported_kwarg in ['MaxObjectCount', 'OperationTimeout']:
             kwargs.pop(unsupported_kwarg, None)
 
-    return klass(creds, classname, namespace, **kwargs)
+    return klass(creds, classname, host, port, ssl, namespace, **kwargs)
 
 
 class WBEMPlugin(PythonPlugin):
@@ -110,20 +110,27 @@ class WBEMPlugin(PythonPlugin):
             userCreds = (device.zWBEMUsername, device.zWBEMPassword)
 
             if wbemclass == 'ec':
+                # TODO migrate to twisted.Agent
                 wbemClass = EnumerateClasses(
                     userCreds, namespace=namespace)
 
             elif wbemclass == 'ecn':
+                # TODO migrate to twisted.Agent
                 wbemClass = EnumerateClassNames(
                     userCreds, namespace=namespace)
 
             elif wbemclass == 'ei':
                 wbemClass = get_enumerate_instances(
-                    userCreds, namespace=namespace, classname=classname,
+                    userCreds, namespace=namespace,
+                    host=device.manageIp, port=device.zWBEMPort,
+                    ssl=device.zWBEMUseSSL,
+                    classname=classname,
                     MaxObjectCount=device.zWBEMMaxObjectCount,
-                    OperationTimeout=device.zWBEMOperationTimeout)
+                    OperationTimeout=device.zWBEMOperationTimeout
+                )
 
             elif wbemclass == 'ein':
+                # TODO migrate to twisted.Agent
                 wbemClass = EnumerateInstanceNames(
                     userCreds, namespace=namespace, classname=classname)
 
@@ -135,7 +142,6 @@ class WBEMPlugin(PythonPlugin):
             wbemClass.deferred.addCallback(check_if_complete,
                                            device, namespace, classname)
             deferreds.append(wbemClass.deferred)
-            create_connection(device, wbemClass)
 
         # Execute the deferreds and return the results to the callback.
         d = DeferredList(deferreds, consumeErrors=True)
@@ -224,6 +230,9 @@ def check_if_complete(results, device, namespace, classname,
         wbemClass = PullInstances(
             credentials,
             namespace,
+            device.manageIp,
+            device.zWBEMPort,
+            device.zWBEMUseSSL,
             enumeration_context,
             device.zWBEMMaxObjectCount,
             classname,
@@ -237,7 +246,6 @@ def check_if_complete(results, device, namespace, classname,
             results_aggregator=results_aggregator,
             **kwargs
         )
-        create_connection(device, wbemClass)
         return wbemClass.deferred
 
     results_aggregator = extend_aggregated_results(results,
