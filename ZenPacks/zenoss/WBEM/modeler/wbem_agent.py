@@ -67,92 +67,6 @@ def get_enumerate_instances(creds, classname, host, port, ssl,
 
     return klass(creds, classname, host, port, ssl, namespace, **kwargs)
 
-def add_collector_timeout(deferred, seconds):
-    """Raise error on deferred when modeler is timed out."""
-    error = CancelledError("WBEM query timeout")
-
-    def handle_timeout():
-        deferred.cancel()
-
-    def handle_result(result):
-        if timeout_d.active():
-            timeout_d.cancel()
-        if isinstance(result, list):
-            for item in result:
-                if not item[0] and item[1].check(CancelledError):
-                    raise error
-        return result
-
-    def handle_failure(failure):
-        # define this method to catch errors from canceled deferredlist
-        # on Zenoss 4.2.x with Twisted v.11
-        if failure.check(CancelledError):
-            raise error
-
-        return failure
-
-    timeout_d = reactor.callLater(seconds, handle_timeout)
-    deferred.addBoth(handle_result)
-    deferred.addErrback(handle_failure)
-
-    return deferred
-
-
-def check_if_complete(results, device, namespace, classname,
-                      results_aggregator=None, **kwargs):
-    if not results_aggregator:
-        results_aggregator = []
-
-    if isinstance(results, tuple):
-        query_results = results[0]
-        enumeration_context = results[2]
-
-        results_aggregator = extend_aggregated_results(query_results,
-                                                       results_aggregator)
-
-        credentials = (device.zWBEMUsername, device.zWBEMPassword)
-        # TODO migrate to twisted.Agent
-        wbemClass = PullInstances(
-            credentials,
-            namespace,
-            device.manageIp,
-            device.zWBEMPort,
-            device.zWBEMUseSSL,
-            enumeration_context,
-            device.zWBEMMaxObjectCount,
-            classname,
-            **kwargs
-        )
-        wbemClass.deferred.addCallback(
-            check_if_complete,
-            device,
-            namespace,
-            classname,
-            results_aggregator=results_aggregator,
-            **kwargs
-        )
-        return wbemClass.deferred
-
-    results_aggregator = extend_aggregated_results(results,
-                                                   results_aggregator)
-
-    if isinstance(results_aggregator, list) and \
-            isinstance(results_aggregator[0], list):
-        results_aggregator = list(
-            itertools.chain.from_iterable(results_aggregator)
-        )
-
-    return results_aggregator
-
-
-def extend_aggregated_results(results, results_aggregator):
-    if isinstance(results, dict):
-        if not results_aggregator:
-            results_aggregator = {}
-        extend_results(results_aggregator, results)
-    else:
-        results_aggregator.append(results)
-    return results_aggregator
 
 class WBEMPlugin(PythonPlugin):
     deviceProperties = PythonPlugin.deviceProperties + (
@@ -265,3 +179,90 @@ class WBEMPlugin(PythonPlugin):
             pass
 
         return results
+
+def add_collector_timeout(deferred, seconds):
+    """Raise error on deferred when modeler is timed out."""
+    error = CancelledError("WBEM query timeout")
+
+    def handle_timeout():
+        deferred.cancel()
+
+    def handle_result(result):
+        if timeout_d.active():
+            timeout_d.cancel()
+        if isinstance(result, list):
+            for item in result:
+                if not item[0] and item[1].check(CancelledError):
+                    raise error
+        return result
+
+    def handle_failure(failure):
+        # define this method to catch errors from canceled deferredlist
+        # on Zenoss 4.2.x with Twisted v.11
+        if failure.check(CancelledError):
+            raise error
+
+        return failure
+
+    timeout_d = reactor.callLater(seconds, handle_timeout)
+    deferred.addBoth(handle_result)
+    deferred.addErrback(handle_failure)
+
+    return deferred
+
+
+def check_if_complete(results, device, namespace, classname,
+                      results_aggregator=None, **kwargs):
+    if not results_aggregator:
+        results_aggregator = []
+
+    if isinstance(results, tuple):
+        query_results = results[0]
+        enumeration_context = results[2]
+
+        results_aggregator = extend_aggregated_results(query_results,
+                                                       results_aggregator)
+
+        credentials = (device.zWBEMUsername, device.zWBEMPassword)
+
+        wbemClass = PullInstances(
+            credentials,
+            namespace,
+            device.manageIp,
+            device.zWBEMPort,
+            device.zWBEMUseSSL,
+            enumeration_context,
+            device.zWBEMMaxObjectCount,
+            classname,
+            **kwargs
+        )
+        wbemClass.deferred.addCallback(
+            check_if_complete,
+            device,
+            namespace,
+            classname,
+            results_aggregator=results_aggregator,
+            **kwargs
+        )
+        return wbemClass.deferred
+
+    results_aggregator = extend_aggregated_results(results,
+                                                   results_aggregator)
+
+    if isinstance(results_aggregator, list) and \
+            isinstance(results_aggregator[0], list):
+        results_aggregator = list(
+            itertools.chain.from_iterable(results_aggregator)
+        )
+
+    return results_aggregator
+
+
+def extend_aggregated_results(results, results_aggregator):
+    if isinstance(results, dict):
+        if not results_aggregator:
+            results_aggregator = {}
+        extend_results(results_aggregator, results)
+    else:
+        results_aggregator.append(results)
+    return results_aggregator
