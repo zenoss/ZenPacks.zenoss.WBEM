@@ -1,6 +1,6 @@
 ##############################################################################
 #
-# Copyright (C) Zenoss, Inc. 2012, 2016, 2017, 2018 all rights reserved.
+# Copyright (C) Zenoss, Inc. 2012, 2016, 2017, all rights reserved.
 #
 # This content is made available according to terms specified in
 # License.zenoss under the directory where your Zenoss product is installed.
@@ -48,10 +48,10 @@ from ZenPacks.zenoss.WBEM.patches_agent import (
     PullInstances,
 )
 
+
 addLocalLibPath()
 
 DEFAULT_CIM_NAMESPACE = 'root/cimv2'
-
 
 def get_enumerate_instances(creds, classname, host, port, ssl,
                             namespace=DEFAULT_CIM_NAMESPACE, **kwargs):
@@ -80,6 +80,7 @@ class WBEMPlugin(PythonPlugin):
 
     wbemQueries = {}
 
+
     def collect(self, device, log):
         if not device.manageIp:
             log.error('%s has no management IP address', device.id)
@@ -100,7 +101,6 @@ class WBEMPlugin(PythonPlugin):
             return None
 
         deferreds = []
-
         for wbemnamespace, wbemclass in self.wbemQueries.items():
             namespaces = wbemnamespace.split(":")
             namespace = namespaces[0]
@@ -126,8 +126,7 @@ class WBEMPlugin(PythonPlugin):
                     ssl=device.zWBEMUseSSL,
                     classname=classname,
                     MaxObjectCount=device.zWBEMMaxObjectCount,
-                    OperationTimeout=device.zWBEMOperationTimeout
-                )
+                    OperationTimeout=device.zWBEMOperationTimeout)
 
             elif wbemclass == 'ein':
                 # TODO migrate to twisted.Agent
@@ -180,7 +179,6 @@ class WBEMPlugin(PythonPlugin):
             pass
 
         return results
-
 
 def add_collector_timeout(deferred, seconds):
     """Raise error on deferred when modeler is timed out."""

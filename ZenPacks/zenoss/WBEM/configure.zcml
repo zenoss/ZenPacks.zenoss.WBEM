@@ -6,5 +6,10 @@
         for=".datasources.WBEMDataSource.WBEMDataSource"
         factory=".datasources.WBEMDataSource.WBEMDataSourceInfo"
         />
+    <adapter
+        provides=".datasources.WBEMAgentDataSource.IWBEMAgentDataSourceInfo"
+        for=".datasources.WBEMAgentDataSource.WBEMAgentDataSource"
+        factory=".datasources.WBEMAgentDataSource.WBEMAgentDataSourceInfo"
+        />
 
 </configure>
