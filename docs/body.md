@@ -85,7 +85,9 @@ Result Component Key
     monitoring template that gets bound to components. In this case
     *Result Component Key* should be set to the attribute or column name
     that contains the component identifier in the result set of the CQL
-    Query.
+    Query. Property can be filled with more that one comma-separated key to get
+    more values from the result and compare it with data from
+    *Result Component Value* field.
 
 <!-- -->
 
@@ -96,7 +98,8 @@ Result Component Value
     the *Result Component Key* column of the CQL result set. Typically
     this takes the form of a TALES expression such as \${here/id} or
     \${here/wbemInstanceId} if wbemInstanceID was modeled on your
-    component.
+    component. Property can be filled with more that one comma-separated
+    values to compare it with data from *Result Component Key* field.
 
 <!-- -->
 
@@ -106,6 +109,9 @@ Result Timestamp Key
     data was originally collected. Like the *Result Component Key* this
     should be the name of an attribute or column name in the results. By
     default this will default to NOW as the collection time.
+
+`Note`: *Result Component Key* and *Result Component Value*
+fields have to contain the same number of elements. Also *CQL Query* must include all elements from *Result Component Key*
 
 WBEMPlugin Modeler Plugin Base Class
 ------------------------------------
@@ -171,8 +177,23 @@ Core users can use the *#zenoss* IRC channel or the [Zenoss Community Forums](ht
 
 ### WBEM Device Modeling or Monitoring never completes
 
-Please check *zWBEMMaxObjectCount*, *zWBEMOperationTimeout*, and *zWBEMRequestTimeout* zProperties documentation 
-and adjust the vaules
+In case EMC devices with a large number of components cannot be modeled successfully, you can adjust `zWBEMMaxObjectCount` and `zWBEMOperationTimeout` properties.
+The first property allows you to control the number of components which WBEM ZenPack will get during the monitoring/modeling per one request.
+For example, you have 5000 volumes, 2000 hard disk, etc. on a target system. Without configuring `zWBEMMaxObjectCount` property, ZenPack will try to get data for all components as one big response. WBEM server may not be able to process such a big request due to performance reasons or transfer response due to network issues. To avoid that you can modify a value of `zWBEMMaxObjectCount` for example to 200, ZenPack will get data in smaller chunks by 200 components in each response.
+Also, you can adjust `zWBEMOperationTimeout` property with a time in seconds which the WBEM Server keeps enumeration session opened after a previous request and based on that time server will close the session.
+
+### No data for components with same identifiers
+
+For example, you have two hard disks with same identifiers but on different arrays, and you set *Result Component Key* to attribute or column name
+    that contains the *component name* in the result. In this case, you will get two components in the results with same name and system will not be able to identify components correctly. To avoid such scenario you can specify additional identifier like *array name* in *Result Component Key*, *CQL Query* and corresponding values in *Result Component Value* to filter it in a more efficient way.
+
+For that example it looks like:
+
+*Result Component Key* = `diskName`, `arrayName`
+
+*Result Component Value* = `${here/name}`, `${here/arrayName}`
+
+*CQL Query* = `SELECT * FORM someDiskClass` or *CQL Query* = `SELECT diskName, arrayName, otherNeededProperties FORM someDiskClass`
 
 Changes
 -------
