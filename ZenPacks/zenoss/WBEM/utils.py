@@ -7,6 +7,8 @@
 #
 ##############################################################################
 
+import calendar
+
 from twisted.internet import ssl, reactor
 from twisted.internet.error import ConnectionRefusedError, TimeoutError
 
@@ -56,3 +58,9 @@ def create_connection(config, wbemClass):
             host=config.manageIp,
             port=int(config.zWBEMPort),
             factory=wbemClass)
+
+
+def convert_to_timestamp(object):
+    """Convert value of CIMDateTime object to timestamp."""
+    return calendar.timegm(object.datetime.utctimetuple())
+

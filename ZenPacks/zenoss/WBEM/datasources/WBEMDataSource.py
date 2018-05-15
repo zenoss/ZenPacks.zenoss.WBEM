@@ -10,7 +10,6 @@
 import logging
 log = logging.getLogger('zen.WBEM')
 
-import calendar
 import re
 
 from twisted.internet import ssl, reactor, defer
@@ -36,10 +35,12 @@ from ZenPacks.zenoss.WBEM.utils import (
     addLocalLibPath,
     result_errmsg,
     create_connection,
+    convert_to_timestamp,
 )
 
 addLocalLibPath()
 
+from pywbem import CIMDateTime
 from pywbem.twisted_client import (
     ExecQuery,
     OpenEnumerateInstances,
@@ -186,10 +187,10 @@ class WBEMDataSourcePlugin(PythonDataSourcePlugin):
             ' '.join(string_to_lines(datasource.query)), context)
 
         params['result_component_key'] = datasource.talesEval(
-            datasource.result_component_key, context)
+            datasource.result_component_key, context).replace(' ', '')
 
         params['result_component_value'] = datasource.talesEval(
-            datasource.result_component_value, context)
+            datasource.result_component_value, context).replace(' ', '')
 
         params['result_timestamp_key'] = datasource.talesEval(
             datasource.result_timestamp_key, context)
@@ -258,8 +259,16 @@ class WBEMDataSourcePlugin(PythonDataSourcePlugin):
             ds0.params['result_component_key']
 
         for result in results:
+            result_key_value = None
+
             if result_component_key:
-                datasource = datasources.get(result[result_component_key])
+                result_component_keys = result_component_key.split(',')
+                if len(result_component_keys) > 1:
+                    result_key_value = ",".join([result[key] for key in result_component_keys])
+                    datasource = datasources.get(result_key_value)
+                else:
+                    result_key_value = result[result_component_key]
+                    datasource = datasources.get(result_key_value)
 
                 if not datasource:
                     log.debug("No datasource for result: %r", result.items())
@@ -268,11 +277,11 @@ class WBEMDataSourcePlugin(PythonDataSourcePlugin):
             else:
                 datasource = ds0
 
-            if result_component_key and result_component_key in result:
+            if result_key_value:
                 result_component_value = datasource.params.get(
                     'result_component_value')
 
-                if result_component_value != result[result_component_key]:
+                if result_component_value != result_key_value:
                     continue
 
             component_id = prepId(datasource.component)
@@ -285,15 +294,18 @@ class WBEMDataSourcePlugin(PythonDataSourcePlugin):
 
             if result_timestamp_key and result_timestamp_key in result:
                 cim_date = result[result_timestamp_key]
-                timestamp = calendar.timegm(cim_date.datetime.utctimetuple())
+                timestamp = convert_to_timestamp(cim_date)
 
             if not timestamp:
                 timestamp = 'N'
 
             for datapoint in datasource.points:
                 if datapoint.id in result:
+                    value = result[datapoint.id]
+                    if isinstance(value, CIMDateTime):
+                        value = convert_to_timestamp(value)
                     data['values'][component_id][datapoint.id] = \
-                        (result[datapoint.id], timestamp)
+                        (value, timestamp)
 
         data['events'].append({
             'eventClassKey': 'wbemCollectionSuccess',
