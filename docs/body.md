@@ -13,6 +13,13 @@ active subscription.
 Releases
 --------
 
+Version 2.0.1- [Download](http://wiki.zenoss.org/download/zenpacks/ZenPacks.zenoss.WBEM/2.0.1/ZenPacks.zenoss.WBEM-2.0.1.egg){.external}
+:   Released on 2018/05/15
+:   Requires [PythonCollector ZenPack](/product/zenpacks/pythoncollector "ZenPack:PythonCollector")
+:   Compatible with Zenoss Core 4.2.x, Zenoss Core 5.x.x, Zenoss
+    Resource Manager 4.2.x, Zenoss Resource Manager 5.x.x, Zenoss Core 6.x.x, Zenoss Resource Manager 6.x.x
+
+
 Version 2.0.0- [Download](http://wiki.zenoss.org/download/zenpacks/ZenPacks.zenoss.WBEM/2.0.0/ZenPacks.zenoss.WBEM-2.0.0.egg){.external}
 :   Released on 2017/12/27
 :   Requires [PythonCollector ZenPack](/product/zenpacks/pythoncollector "ZenPack:PythonCollector")
@@ -200,6 +207,7 @@ Changes
 2.0.1
 
 - Add possibility to check monitoring data by multiple fields (ZPS-2817)
+- Tested with Zenoss Resource Manager 6.1.2, Zenoss Resource Manager 5.3.3
 
 2.0.0
 
