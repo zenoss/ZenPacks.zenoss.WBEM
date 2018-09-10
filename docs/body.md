@@ -197,6 +197,11 @@ For that example it looks like:
 
 Changes
 -------
+
+2.1.0
+
+- Use non-blocking IO for collection (ZPS-4376)
+
 2.0.1
 
 - Add possibility to check monitoring data by multiple fields (ZPS-2817)
