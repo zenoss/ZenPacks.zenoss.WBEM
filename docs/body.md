@@ -201,6 +201,7 @@ Changes
 2.1.0
 
 - Use non-blocking IO for collection (ZPS-4376)
+- Add labels and descriptions for WBEM configuration properties (ZPS-4489)
 
 2.0.1
 
