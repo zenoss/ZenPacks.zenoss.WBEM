@@ -1,0 +1,6 @@
+#!/opt/zenoss/bin/python2.7
+
+import sys
+import wbemcli
+
+sys.exit(wbemcli._main())

@@ -10,10 +10,12 @@
 import logging
 LOG = logging.getLogger('zen.WBEM')
 
+from . import dependencies
+pywbem = dependencies.import_pywbem()
+
 from Products.ZenModel.ZenPack import ZenPackBase
 from Products.ZenRelations.zPropertyCategory import setzPropertyCategory
 import ZenPacks.zenoss.WBEM.patches
-
 
 # Categorize our zProperties.
 ZPROPERTY_CATEGORY = 'WBEM'
@@ -25,7 +27,6 @@ setzPropertyCategory('zWBEMUseSSL', ZPROPERTY_CATEGORY)
 setzPropertyCategory('zWBEMRequestTimeout', ZPROPERTY_CATEGORY)
 setzPropertyCategory('zWBEMMaxObjectCount', ZPROPERTY_CATEGORY)
 setzPropertyCategory('zWBEMOperationTimeout', ZPROPERTY_CATEGORY)
-
 
 class ZenPack(ZenPackBase):
     """WBEM ZenPack."""

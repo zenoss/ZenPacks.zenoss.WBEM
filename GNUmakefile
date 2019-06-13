@@ -9,7 +9,10 @@
 
 PYTHON=$(shell which python)
 HERE=$(PWD)
-PYWBEM_DIR=$(HERE)/src/pywbem
+PYWBEMZ_TAR=$(HERE)/src/pywbemz-0.14.3.tar.gz
+M2CRYPTO_TAR=$(HERE)/src/M2Crypto-0.32.0.tar.gz
+TYPING_TAR=$(HERE)/src/typing-3.6.6.tar.gz
+PLY_TAR=$(HERE)/src/ply-3.11.tar.gz
 ZP_DIR=$(HERE)/ZenPacks/zenoss/WBEM
 LIB_DIR=$(ZP_DIR)/lib
 BIN_DIR=$(ZP_DIR)/bin
@@ -24,12 +27,15 @@ egg:
 	# setup.py will call 'make build' before creating the egg
 	python setup.py bdist_egg
 
-build:
-	cd $(PYWBEM_DIR) ; \
-		PYTHONPATH="$(PYTHONPATH):$(LIB_DIR)" \
-		$(PYTHON) setup.py install \
-		--install-lib="$(LIB_DIR)" \
-		--install-scripts="$(BIN_DIR)"
+build: $(LIB_DIR) $(BIN_DIR)
+	@echo
+
+$(LIB_DIR):
+	mkdir -p $(LIB_DIR)
+	PYTHONPATH="$(PYTHONPATH):$(LIB_DIR)"
+
+$(BIN_DIR):
+	mkdir -p $(BIN_DIR)
 
 clean:
 	rm -rf lib build dist *.egg-info
