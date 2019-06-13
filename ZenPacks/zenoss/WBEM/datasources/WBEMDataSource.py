@@ -39,7 +39,7 @@ from ZenPacks.zenoss.WBEM.utils import (
 addLocalLibPath()
 
 from pywbem import CIMDateTime
-from pywbem.twisted_agent import (
+from ZenPacks.zenoss.WBEM.twisted_agent import (
     ExecQuery,
     OpenEnumerateInstances,
 )

@@ -14,7 +14,6 @@ from Products.ZenModel.ZenPack import ZenPackBase
 from Products.ZenRelations.zPropertyCategory import setzPropertyCategory
 import ZenPacks.zenoss.WBEM.patches
 
-
 # Categorize our zProperties.
 ZPROPERTY_CATEGORY = 'WBEM'
 
