@@ -11,7 +11,7 @@ from ZenPacks.zenoss.WBEM.utils import addLocalLibPath
 addLocalLibPath()
 
 from pywbem import CIMError
-from pywbem import twisted_agent
+import twisted_agent
 try:
     from elementtree.ElementTree import fromstring
 except ImportError, arg:
