@@ -565,6 +565,9 @@ def wbem_request(url, data, creds, cimxml_headers=None, debug=False, x509=None,
                     else:
                         ctx.load_verify_locations(cafile=self.ca_certs)
                 try:
+                    # this line cause the SSL connection to ignore name mismatches
+                    # (ie. Peer certificate subjectAltName does not match host, expected 10.87.207.15, got DNS:solutions-host3.zenoss.lab)
+                    SSL.Connection.clientPostConnectionCheck = None
                     self.sock = SSL.Connection(ctx, self.sock)
 
                     # Below is a body of SSL.Connection.connect() method

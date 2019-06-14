@@ -10,8 +10,8 @@
 from base64 import b64encode
 from twisted.internet import reactor, defer
 
-from pywbem import CIMClass, CIMClassName, CIMInstance, CIMInstanceName, CIMError, CIMDateTime, cim_types, cim_xml, cim_obj
-from pywbem.cim_constants import CIM_ERR_INVALID_PARAMETER
+from lib.pywbem import CIMClass, CIMClassName, CIMInstance, CIMInstanceName, CIMError, CIMDateTime, cim_types, cim_xml, cim_obj
+from lib.pywbem.cim_constants import CIM_ERR_INVALID_PARAMETER
 
 try:
     from elementtree.ElementTree import fromstring, tostring
@@ -300,19 +300,6 @@ class OpenEnumerateInstances(BaseWBEMMethod):
         return '<%s(/%s:%s) at 0x%x>' % \
                (self.__class__, self.namespace, self.classname, id(self))
 
-
-    def extend_results(base_dict, value_for_update):
-        """Update result dict with a nested dict."""
-        for k, v in value_for_update.iteritems():
-            if isinstance(v, dict):
-                base_dict[k] = extend_results(
-                    base_dict.get(k, dict()), v
-                )
-            else:
-                base_dict[k] = v
-        return base_dict
-
-
     def parseResponse(self, xml):
         res = []
         part_results = {}
@@ -398,6 +385,18 @@ class OpenEnumerateInstances(BaseWBEMMethod):
             return (rtn_objects, end_of_sequence, rtn_ctxt)
         else:
             return rtn_objects
+
+
+def extend_results(base_dict, value_for_update):
+    """Update result dict with a nested dict."""
+    for k, v in value_for_update.iteritems():
+        if isinstance(v, dict):
+            base_dict[k] = extend_results(
+                base_dict.get(k, dict()), v
+            )
+        else:
+            base_dict[k] = v
+    return base_dict
 
 
 class PullInstances(OpenEnumerateInstances):
@@ -612,4 +611,5 @@ class EnumerateClasses(BaseWBEMMethod):
               for x in xml.findall('.//CLASS')]
 
         return [pywbem.tupleparse.parse_class(x) for x in tt]
+
 

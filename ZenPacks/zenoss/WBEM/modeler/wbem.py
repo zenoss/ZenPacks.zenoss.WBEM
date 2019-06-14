@@ -27,7 +27,7 @@ set to succesfully pull data.
 """
 import itertools
 
-from pywbem.utils import extend_results
+from ZenPacks.zenoss.WBEM.twisted_agent import extend_results
 
 from twisted.internet import ssl, reactor
 from twisted.internet.defer import DeferredList, CancelledError
