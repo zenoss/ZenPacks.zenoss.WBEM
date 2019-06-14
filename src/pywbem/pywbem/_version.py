@@ -32,9 +32,6 @@ the `pbr` package from Git information.
 # importing pbr does not work because of the way the pbr package makes its
 # submodules available.
 
-import pbr.version
-
-
 #: The full version of this package including any development levels, as a
 #: :term:`string`.
 #:
@@ -43,4 +40,10 @@ import pbr.version
 #: * "M.N.P.devNNN": Development level NNN of a not yet released assumed M.N.P
 #:   version
 #: * "M.N.P": A released M.N.P version
-__version__ = pbr.version.VersionInfo('pywbem').release_string()
+
+#import pbr.version
+#__version__ = pbr.version.VersionInfo('pywbem').release_string()
+
+# Hard coded the string because pbr was causing a weird load error:
+# "Versioning for this project requires either an sdist tarball, or access to an upstream git repository".
+__version__ = '0.14.3'

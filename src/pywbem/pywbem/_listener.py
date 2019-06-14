@@ -137,7 +137,7 @@ from six.moves import BaseHTTPServer
 from six.moves import socketserver
 from six.moves import http_client
 
-from . import cim_xml
+from .cim_xml import *
 from ._version import __version__
 from .cim_obj import CIMInstance
 from .cim_constants import CIM_ERR_NOT_SUPPORTED, CIM_ERR_INVALID_PARAMETER, \

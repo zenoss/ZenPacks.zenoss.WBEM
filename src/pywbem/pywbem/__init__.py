@@ -38,7 +38,7 @@ import logging
 # them into the pywbem namespace would duplicate their names and thus
 # would cause changes to the config variables not to be visible in their
 # original namespace.
-from . import config  # noqa: F401
+from .config import *  # noqa: F401
 
 from ._utils import *  # noqa: F403,F401
 from .cim_types import *  # noqa: F403,F401
