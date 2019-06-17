@@ -41,7 +41,7 @@ $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
 
 ply:
-    # install ply-3.11 compatible version with M2Crypto
+	# install ply-3.11 compatible version with M2Crypto
 	pip install $(PLY_TAR)
 
 m2crypto: ply
