@@ -34,7 +34,7 @@ build: m2crypto $(LIB_DIR) $(BIN_DIR)
 
 $(LIB_DIR):
 	mkdir -p $(LIB_DIR)
-    touch $(LIB_DIR)/__init__.py
+	touch $(LIB_DIR)/__init__.py
 
 $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
