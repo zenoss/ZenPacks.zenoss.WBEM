@@ -210,6 +210,7 @@ Changes
 2.2.0
 -   Updated to use the lastest versions of pywbem and M2Crypto. Prior versions used SSLv3 (which is now rejected by most/all SSL Servers)
 -   This requires M2Crypto version 0.32.0; pip install M2Crypto==0.32.0
+-   This requires M2Crypto version 0.32.0; pip install ply==3.11   
 -   This requires the 0.14.3 version of pywbem; pip install pywbem==0.14.3
 
 2.1.0
