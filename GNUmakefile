@@ -9,7 +9,7 @@
 
 PYTHON=$(shell which python)
 HERE=$(PWD)
-PYWBEM_DIR=$(HERE)/src/pywbem
+PYWBEM_TAR=$(HERE)/src/pywbem-0.14.3.tar.gz
 M2CRYPTO_TAR=$(HERE)/src/M2Crypto-0.32.0.tar.gz
 PLY_TAR=$(HERE)/src/ply-3.11.tar.gz
 ZP_DIR=$(HERE)/ZenPacks/zenoss/WBEM
@@ -40,16 +40,13 @@ $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
 
 ply:
-	# install ply-3.11 compatible version with M2Crypto
 	pip install $(PLY_TAR)
 
 m2crypto: ply
-	# install pywbem-0.14.3 compatible version of M2Crypto
 	pip install $(M2CRYPTO_TAR)
-	#tar zxf $(M2CRYPTO_TAR) requests-2.7.0/requests --strip-components=2
 
 pywbem: ply m2crypto
-	pip install $(PYWBEM_DIR)
+	pip install $(PYWBEM_TAR)
 
 clean:
 	rm -rf lib build dist *.egg-info
