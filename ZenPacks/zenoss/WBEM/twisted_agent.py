@@ -10,8 +10,8 @@
 from base64 import b64encode
 from twisted.internet import reactor, defer
 
-from lib.pywbem import CIMClass, CIMClassName, CIMInstance, CIMInstanceName, CIMError, CIMDateTime, cim_types, cim_xml, cim_obj
-from lib.pywbem.cim_constants import CIM_ERR_INVALID_PARAMETER
+from pywbem import CIMClass, CIMClassName, CIMInstance, CIMInstanceName, CIMError, CIMDateTime, cim_types, cim_xml, cim_obj
+from pywbem.cim_constants import CIM_ERR_INVALID_PARAMETER
 
 try:
     from elementtree.ElementTree import fromstring, tostring
