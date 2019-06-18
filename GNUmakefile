@@ -11,7 +11,7 @@ PYTHON=$(shell which python)
 HERE=$(PWD)
 PYWBEM_DIR=$(HERE)/src/pywbem-0.14.3
 M2CRYPTO_TAR=$(HERE)/src/M2Crypto-0.32.0.tar.gz
-PLY_TAR=$(HERE)/src/ply-3.11.tar.gz
+PLY_DIR=$(HERE)/src/ply-3.11
 ZP_DIR=$(HERE)/ZenPacks/zenoss/WBEM
 LIB_DIR=$(ZP_DIR)/lib
 BIN_DIR=$(ZP_DIR)/bin
@@ -40,7 +40,7 @@ $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
 
 ply:
-	pip install $(PLY_TAR)
+	pip install -e $(PLY_DIR)
 
 m2crypto: ply
 	pip install $(M2CRYPTO_TAR)
