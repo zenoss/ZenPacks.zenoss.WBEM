@@ -40,7 +40,7 @@ $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
 
 ply:
-	pip install --prefix ZenPacks/zenoss/WBEM -e $(PLY_DIR)
+	pip install --install-dir $(ZP_DIR) -e $(PLY_DIR)
 
 m2crypto: ply
 	pip install $(M2CRYPTO_TAR)
