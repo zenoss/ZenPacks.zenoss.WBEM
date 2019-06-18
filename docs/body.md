@@ -13,7 +13,7 @@ active subscription.
 Releases
 --------
 
-Version 2.2.0- [Download](http://wiki.zenoss.org/download/zenpacks/ZenPacks.zenoss.WBEM/2.2.0/ZenPacks.zenoss.WBEM-2.2.0.egg){.external}
+Version 2.1.1- [Download](http://wiki.zenoss.org/download/zenpacks/ZenPacks.zenoss.WBEM/2.1.1/ZenPacks.zenoss.WBEM-2.1.1.egg){.external}
 :   Released on 2019/06/20
 :   Requires [PythonCollector ZenPack](/product/zenpacks/pythoncollector "ZenPack:PythonCollector")
 :   Compatible with Zenoss Cloud, 5.3 - 6.2
@@ -207,7 +207,7 @@ For that example it looks like:
 Changes
 -------
 
-2.2.0
+2.1.1
 -   Updated to use the lastest versions of pywbem and M2Crypto. Prior versions used SSLv3 (which is now rejected by most/all SSL Servers)
 -   This requires M2Crypto version 0.32.0; pip install M2Crypto==0.32.0
 -   This requires ply version 3.11; pip install ply==3.11   

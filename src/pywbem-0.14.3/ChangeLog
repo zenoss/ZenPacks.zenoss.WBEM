@@ -1,23 +1,17 @@
 CHANGES
 =======
 
-* updated lib references
-* updating pywbem reference
-* updates for installing the pywbem package/module
-* updated install setup.py details
-* updated documentation
-* updating to pywbem version 0.14.3 Installer includes adding M2Crpto0.32.0 and ply-3.11
-* formatting..
-* updated installer to include ply-3.11 (for M2Crypto)
-* patching whitesapce
-* ZP should not include these directories, added at runtime
-* updates for ZenPack setup/makefile installer
-* updating version and doc
-* update for python pathing
-* updating reference to local lib path for pywbem
-* updates for zenpack compatability
-* updating to pywbem version 0.14.3 https://pypi.org/project/pywbem/#history
 * Start 2.2.0 development
+
+2.1.1
+-----
+
+* updated install setup.py details
+* updated documentation for 2.1.1
+* Installer updates to M2Crpto0.32.0
+* Installer updates to ply-3.11 (for M2Crypto)
+* updating to pywbem version 0.14.3
+* updates for zenpack backward-compatability dependencies
 
 2.1.0
 -----
