@@ -9,9 +9,9 @@
 
 PYTHON=$(shell which python)
 HERE=$(PWD)
-PYWBEM_DIR=$(HERE)/src/pywbem-0.14.3
-M2CRYPTO_DIR=$(HERE)/src/M2Crypto-0.32.0
-PLY_DIR=$(HERE)/src/ply-3.11
+PYWBEM_TAR=$(HERE)/src/pywbem-0.14.3.tar.gz
+M2CRYPTO_TAR=$(HERE)/src/M2Crypto-0.32.0.tar.gz
+PLY_TAR=$(HERE)/src/ply-3.11.tar.gz
 ZP_DIR=$(HERE)/ZenPacks/zenoss/WBEM
 LIB_DIR=$(ZP_DIR)/lib
 BIN_DIR=$(ZP_DIR)/bin
@@ -41,13 +41,16 @@ $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
 
 ply: $(LIB_DIR) $(BIN_DIR)
-	easy_install --no-deps --install-dir="$(LIB_DIR)" --script-dir="$(BIN_DIR)" $(PLY_DIR)
+	PYTHONPATH="$(PYTHONPATH):$(LIB_DIR)" \
+	easy_install --no-deps --install-dir="$(LIB_DIR)" --script-dir="$(BIN_DIR)" $(PLY_TAR)
 
 m2crypto: ply
-	easy_install --no-deps --install-dir="$(LIB_DIR)" --script-dir="$(BIN_DIR)" $(M2CRYPTO_DIR)
+	PYTHONPATH="$(PYTHONPATH):$(LIB_DIR)" \
+	easy_install --no-deps --install-dir="$(LIB_DIR)" --script-dir="$(BIN_DIR)" $(M2CRYPTO_TAR)
 
 pywbem: ply m2crypto
-	easy_install --no-deps --install-dir="$(LIB_DIR)" --script-dir="$(BIN_DIR)" $(PYWBEM_DIR)
+	PYTHONPATH="$(PYTHONPATH):$(LIB_DIR)" \
+	easy_install --no-deps --install-dir="$(LIB_DIR)" --script-dir="$(BIN_DIR)" $(PYWBEM_TAR)
 
 clean:
 	rm -rf lib build dist *.egg-info
