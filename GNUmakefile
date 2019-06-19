@@ -27,11 +27,7 @@ egg:
 	python setup.py bdist_egg
 
 build: ply m2crypto pywbemz $(LIB_DIR) $(BIN_DIR)
-	cd $(PYWBEMZ_DIR) ; \
-		PYTHONPATH="$(PYTHONPATH):$(LIB_DIR)" \
-		$(PYTHON) $(HERE)/setup.py install \
-		--install-lib="$(LIB_DIR)" \
-		--install-scripts="$(BIN_DIR)"
+	@echo
 
 $(LIB_DIR):
 	mkdir -p $(LIB_DIR)
