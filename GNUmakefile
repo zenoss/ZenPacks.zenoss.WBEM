@@ -29,7 +29,7 @@ egg:
 build: ply m2crypto pywbemz $(LIB_DIR) $(BIN_DIR)
 	cd $(PYWBEMZ_DIR) ; \
 		PYTHONPATH="$(PYTHONPATH):$(LIB_DIR)" \
-		$(PYTHON) setup.py install \
+		$(PYTHON) $(HERE)/setup.py install \
 		--install-lib="$(LIB_DIR)" \
 		--install-scripts="$(BIN_DIR)"
 
