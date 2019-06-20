@@ -11,6 +11,7 @@ PYTHON=$(shell which python)
 HERE=$(PWD)
 PYWBEMZ_TAR=$(HERE)/src/pywbemz-0.14.3.tar.gz
 M2CRYPTO_TAR=$(HERE)/src/M2Crypto-0.32.0.tar.gz
+TYPING_TAR=$(HERE)/src/typing-3.6.6.tar.gz
 PLY_TAR=$(HERE)/src/ply-3.11.tar.gz
 ZP_DIR=$(HERE)/ZenPacks/zenoss/WBEM
 LIB_DIR=$(ZP_DIR)/lib
@@ -26,7 +27,7 @@ egg:
 	# setup.py will call 'make build' before creating the egg
 	python setup.py bdist_egg
 
-build: ply m2crypto pywbemz $(LIB_DIR) $(BIN_DIR)
+build: ply typing m2crypto pywbemz $(LIB_DIR) $(BIN_DIR)
 	@echo
 
 $(LIB_DIR):
@@ -40,11 +41,15 @@ ply: $(LIB_DIR) $(BIN_DIR)
 	PYTHONPATH="$(PYTHONPATH):$(LIB_DIR)" \
 	easy_install --no-deps --install-dir="$(LIB_DIR)" --script-dir="$(BIN_DIR)" $(PLY_TAR)
 
-m2crypto: ply
+typing: $(LIB_DIR) $(BIN_DIR)
+	PYTHONPATH="$(PYTHONPATH):$(LIB_DIR)" \
+	easy_install --no-deps --install-dir="$(LIB_DIR)" --script-dir="$(BIN_DIR)" $(TYPING_TAR)
+
+m2crypto: ply typing
 	PYTHONPATH="$(PYTHONPATH):$(LIB_DIR)" \
 	easy_install --no-deps --install-dir="$(LIB_DIR)" --script-dir="$(BIN_DIR)" $(M2CRYPTO_TAR)
 
-pywbemz: ply m2crypto
+pywbemz: ply typing m2crypto
 	PYTHONPATH="$(PYTHONPATH):$(LIB_DIR)" \
 	easy_install --no-deps --install-dir="$(LIB_DIR)" --script-dir="$(BIN_DIR)" $(PYWBEMZ_TAR)
 
