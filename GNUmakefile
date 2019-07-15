@@ -27,7 +27,7 @@ egg:
 	# setup.py will call 'make build' before creating the egg
 	python setup.py bdist_egg
 
-build: $(LIB_DIR) $(BIN_DIR)
+build: typing m2crypto ply pywbemz $(LIB_DIR) $(BIN_DIR)
 	@echo
 
 $(LIB_DIR):
@@ -36,6 +36,22 @@ $(LIB_DIR):
 
 $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
+
+ply: $(LIB_DIR) $(BIN_DIR)
+	PYTHONPATH="$(PYTHONPATH):$(LIB_DIR)" \
+	easy_install --no-deps --install-dir="$(LIB_DIR)" --script-dir="$(BIN_DIR)" $(PLY_TAR)
+
+typing: $(LIB_DIR) $(BIN_DIR)
+	PYTHONPATH="$(PYTHONPATH):$(LIB_DIR)" \
+	easy_install --no-deps --install-dir="$(LIB_DIR)" --script-dir="$(BIN_DIR)" $(TYPING_TAR)
+
+m2crypto: typing
+	PYTHONPATH="$(PYTHONPATH):$(LIB_DIR)" \
+	easy_install --no-deps --install-dir="$(LIB_DIR)" --script-dir="$(BIN_DIR)" $(M2CRYPTO_TAR)
+
+pywbemz: ply m2crypto
+	PYTHONPATH="$(PYTHONPATH):$(LIB_DIR)" \
+	easy_install --no-deps --install-dir="$(LIB_DIR)" --script-dir="$(BIN_DIR)" $(PYWBEMZ_TAR)
 
 clean:
 	rm -rf lib build dist *.egg-info

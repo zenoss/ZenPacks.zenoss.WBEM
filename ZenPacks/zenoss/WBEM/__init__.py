@@ -10,9 +10,6 @@
 import logging
 LOG = logging.getLogger('zen.WBEM')
 
-from . import dependencies
-pywbem = dependencies.import_pywbem()
-
 from Products.ZenModel.ZenPack import ZenPackBase
 from Products.ZenRelations.zPropertyCategory import setzPropertyCategory
 import ZenPacks.zenoss.WBEM.patches
