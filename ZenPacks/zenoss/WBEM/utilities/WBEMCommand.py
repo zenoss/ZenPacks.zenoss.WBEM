@@ -12,6 +12,9 @@ import pprint
 import Globals
 from Products.ZenUtils.Utils import unused
 
+from ZenPacks.zenoss.WBEM import dependencies
+dependencies.import_wbem_libs()
+
 from ZenPacks.zenoss.WBEM.utils import addLocalLibPath
 addLocalLibPath()
 
