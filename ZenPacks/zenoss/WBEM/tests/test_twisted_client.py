@@ -16,6 +16,9 @@ from Products.ZenTestCase.BaseTestCase import BaseTestCase
 from ZenPacks.zenoss.WBEM.utils import addLocalLibPath
 addLocalLibPath()
 
+from ZenPacks.zenoss.WBEM import dependencies
+dependencies.import_wbem_libs()
+
 from pywbem.twisted_client import EnumerateInstances
 from pywbem.cim_obj import CIMInstance
 
