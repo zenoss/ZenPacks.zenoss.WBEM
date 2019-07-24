@@ -13,6 +13,13 @@ LOG = logging.getLogger('zen.WBEM')
 from Products.ZenModel.ZenPack import ZenPackBase
 from Products.ZenRelations.zPropertyCategory import setzPropertyCategory
 
+'''
+ZenPacks dependent upon WBEM use pywbem objects during their launch, hence the WBEM zp also needs
+load the dependencies on launch
+'''
+from ZenPacks.zenoss.WBEM import dependencies
+dependencies.import_wbem_libs()
+
 # Categorize our zProperties.
 ZPROPERTY_CATEGORY = 'WBEM'
 
