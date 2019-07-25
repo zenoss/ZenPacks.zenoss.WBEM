@@ -1,6 +1,7 @@
 import importlib
 import os
 import site
+from Products.ZenUtils.Utils import monkeypatch
 
 callback_patched = False
 
@@ -27,10 +28,11 @@ def import_wbem_libs():
     import_module('typing',   'dependencies/typing-3.6.6')
     import_module('M2Crypto', 'dependencies/m2crypto-0.32.0')
     import_module('pywbem',   'dependencies/pywbemz-0.14.3')
-    set_patches()
+    set_monkeypatches()
     return
 
-def set_patches():
+def set_monkeypatches():
+    global callback_patched
     if not callback_patched:
         callback_patched = True
         @monkeypatch('pywbem.cim_operations.WBEMConnection')
