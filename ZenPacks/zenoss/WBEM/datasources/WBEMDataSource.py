@@ -96,15 +96,17 @@ class WBEMDataSourcePlugin(PythonDataSourcePlugin):
 
     def loadDependencies(self):
         try:
-            type(pywbem)
+            global pywbem
+            if not pywbem:
+                from ZenPacks.zenoss.WBEM import dependencies
+                dependencies.import_wbem_libs()
+                from pywbem import CIMDateTime
+                from pywbem.twisted_agent import (
+                    ExecQuery,
+                    OpenEnumerateInstances,
+                )
         except:
-            from ZenPacks.zenoss.WBEM import dependencies
-            dependencies.import_wbem_libs()
-            from pywbem import CIMDateTime
-            from pywbem.twisted_agent import (
-                ExecQuery,
-                OpenEnumerateInstances,
-            )
+            log.error('Errors encountered when loading WBEM dependencies')
 
     @classmethod
     def config_key(cls, datasource, context):
