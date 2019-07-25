@@ -41,7 +41,6 @@ def set_monkeypatches():
                      no_verification=False, timeout=None, use_pull_operations=False,
                      stats_enabled=False):
             # Monkeypatch to intercept calls to WBEMConnection and set the SSL Cert verify-callback
-            import pdb; pdb;set_trace()
             return original(self, url=url, creds=creds, default_namespace=default_namespace, x509=x509,
                             verify_callback=SSLCertCheck,
                             ca_certs=ca_certs, no_verification=no_verification, timeout=timeout,
