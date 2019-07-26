@@ -80,4 +80,3 @@ class PullInstances(HandleResponseMixin, pywbem.twisted_agent.PullInstances):
 
 class OpenEnumerateInstances(HandleResponseMixin, pywbem.twisted_agent.OpenEnumerateInstances):
     pass
-

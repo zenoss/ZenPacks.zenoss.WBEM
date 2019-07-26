@@ -61,6 +61,11 @@ Due to EMC.base zenpacks' immediate dependency on pywbem (due to __init__.py) th
 have the dynamic libraries loaded at launch.  Thus the runtime-dynamic link is not needed.
 Instead we will import the dependencies on launch
 
+'''
+Due to EMC.base zenpacks' immediate dependency on pywbem (due to __init__.py) this WBEM zenpack must
+have the dynamic libraries loaded at launch.  Thus the runtime-dynamic link is not needed.
+Instead we will import the dependencies on launch
+
 def link_CIMDateTime():
     global datetime_patched
     if not datetime_patched:
@@ -69,4 +74,3 @@ def link_CIMDateTime():
         class CIMDateTime(pywbem.CIMDateTime):
             # WBEMDataSources.CIMDateTime should derive from pywbem.CIMDateTime via dynamic dependencies
             pass
-'''

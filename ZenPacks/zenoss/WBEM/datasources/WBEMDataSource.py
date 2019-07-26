@@ -59,7 +59,6 @@ def string_to_lines(string):
 
     return None
 
-
 class WBEMDataSource(PythonDataSource):
     """Datasource used to capture datapoints from WBEM providers."""
 
@@ -101,14 +100,19 @@ class WBEMDataSourcePlugin(PythonDataSourcePlugin):
     def loadDependencies(self):
         try:
             global pywbem
-            if not pywbem:
-                from ZenPacks.zenoss.WBEM import dependencies
-                dependencies.import_wbem_libs()
-                from pywbem import CIMDateTime
-                from pywbem.twisted_agent import (
-                    ExecQuery,
-                    OpenEnumerateInstances,
-                )
+            if pywbem:
+                pass
+        except:
+            from ZenPacks.zenoss.WBEM import dependencies
+            dependencies.import_wbem_libs()
+            import pywbem
+
+        try:
+            from pywbem import CIMDateTime
+            from pywbem.twisted_agent import (
+                ExecQuery,
+                OpenEnumerateInstances,
+            )
         except:
             log.error('Errors encountered when loading WBEM dependencies')
 
@@ -189,6 +193,7 @@ class WBEMDataSourcePlugin(PythonDataSourcePlugin):
                 ResultComponentKey=ds0.params['result_component_key']
             )
         else:
+            from pywbem.twisted_agent import ExecQuery
             factory = ExecQuery(
                 credentials,
                 ds0.params['query_language'],
