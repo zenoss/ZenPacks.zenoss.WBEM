@@ -56,7 +56,6 @@ def SSLCertCheck(connection, x509, errnum, errdepth, return_code):
     # (future: add a zProperty to check cert name)
     return True
 
-
 '''
 Due to EMC.base zenpacks' immediate dependency on pywbem (due to __init__.py) this WBEM zenpack must
 have the dynamic libraries loaded at launch.  Thus the runtime-dynamic link is not needed.
