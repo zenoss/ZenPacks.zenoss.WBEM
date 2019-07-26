@@ -12,9 +12,9 @@ addLocalLibPath()
 
 from . import dependencies
 dependencies.import_wbem_libs()
-
 from pywbem import CIMError
 import pywbem.twisted_agent
+
 try:
     from elementtree.ElementTree import fromstring
 except ImportError, arg:
