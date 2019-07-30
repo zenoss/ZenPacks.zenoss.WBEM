@@ -243,6 +243,11 @@ class WBEMDataSourcePlugin(PythonDataSourcePlugin):
                     datasource = datasources.get(result_key_value)
 
                 if not datasource:
+                    # fix for zps-3572; checks for result_key_value without whitespace
+                    result_key_value = result_key_value.replace(' ', '')
+                    datasource = datasources.get(result_key_value)
+
+                if not datasource:
                     log.debug("No datasource for result: %r", result.items())
                     continue
 
