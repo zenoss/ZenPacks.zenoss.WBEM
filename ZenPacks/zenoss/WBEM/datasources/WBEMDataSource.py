@@ -185,6 +185,7 @@ class WBEMDataSourcePlugin(PythonDataSourcePlugin):
                 PropertyFilter=property_filter,
                 ResultComponentKey=ds0.params['result_component_key']
             )
+            from ZenPacks.zenoss.WBEM.modeler.wbem import check_if_complete
             factory.deferred.addCallback(
                 check_if_complete, ds0,
                 ds0.params['namespace'],
