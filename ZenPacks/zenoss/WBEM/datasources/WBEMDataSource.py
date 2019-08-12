@@ -173,6 +173,7 @@ class WBEMDataSourcePlugin(PythonDataSourcePlugin):
 
         if ds0.zWBEMMaxObjectCount > 0:
             property_filter = ds0.params.get('property_filter', (None, None))
+            from pywbem.twisted_agent import OpenEnumerateInstances
             factory = OpenEnumerateInstances(
                 credentials,
                 namespace=ds0.params['namespace'],
