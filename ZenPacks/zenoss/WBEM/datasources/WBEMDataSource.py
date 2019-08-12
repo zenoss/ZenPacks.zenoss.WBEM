@@ -38,7 +38,7 @@ from ZenPacks.zenoss.WBEM.utils import (
 
 from ZenPacks.zenoss.WBEM import dependencies
 dependencies.import_wbem_libs()
-
+from pywbem import CIMDateTime
 addLocalLibPath()
 
 CIM_CLASSNAME = re.compile(r'from\s+([\w_]+)', re.I)
