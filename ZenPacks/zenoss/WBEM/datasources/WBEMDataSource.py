@@ -38,7 +38,6 @@ from ZenPacks.zenoss.WBEM.utils import (
 
 from ZenPacks.zenoss.WBEM import dependencies
 dependencies.import_wbem_libs()
-from pywbem import CIMDateTime
 
 addLocalLibPath()
 
@@ -108,6 +107,7 @@ class WBEMDataSourcePlugin(PythonDataSourcePlugin):
             import pywbem
 
         try:
+            global CIMDateTime, ExecQuery, OpenEnumerateInstances
             from pywbem import CIMDateTime
             from pywbem.twisted_agent import (
                 ExecQuery,
@@ -173,6 +173,7 @@ class WBEMDataSourcePlugin(PythonDataSourcePlugin):
 
         if ds0.zWBEMMaxObjectCount > 0:
             property_filter = ds0.params.get('property_filter', (None, None))
+            global OpenEnumerateInstances
             factory = OpenEnumerateInstances(
                 credentials,
                 namespace=ds0.params['namespace'],
@@ -194,7 +195,7 @@ class WBEMDataSourcePlugin(PythonDataSourcePlugin):
                 ResultComponentKey=ds0.params['result_component_key']
             )
         else:
-            from pywbem.twisted_agent import ExecQuery
+            global ExecQuery
             factory = ExecQuery(
                 credentials,
                 ds0.params['query_language'],
@@ -280,6 +281,7 @@ class WBEMDataSourcePlugin(PythonDataSourcePlugin):
             for datapoint in datasource.points:
                 if datapoint.id in result:
                     value = result[datapoint.id]
+                    global CIMDateTime
                     if isinstance(value, CIMDateTime):
                         value = convert_to_timestamp(value)
                     data['values'][component_id][datapoint.id] = \
