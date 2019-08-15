@@ -10,8 +10,11 @@
 from ZenPacks.zenoss.WBEM.utils import addLocalLibPath
 addLocalLibPath()
 
+from . import dependencies
+dependencies.import_wbem_libs()
 from pywbem import CIMError
-from pywbem import twisted_agent
+import pywbem.twisted_agent
+
 try:
     from elementtree.ElementTree import fromstring
 except ImportError, arg:
@@ -55,26 +58,26 @@ class HandleResponseMixin():
         raise (CIMError(code, error.attrib['DESCRIPTION']))
 
 
-class EnumerateInstances(HandleResponseMixin, twisted_agent.EnumerateInstances):
+class EnumerateInstances(HandleResponseMixin, pywbem.twisted_agent.EnumerateInstances):
     pass
 
 
-class EnumerateInstanceNames(HandleResponseMixin, twisted_agent.EnumerateInstanceNames):
+class EnumerateInstanceNames(HandleResponseMixin, pywbem.twisted_agent.EnumerateInstanceNames):
     pass
 
 
-class EnumerateClasses(HandleResponseMixin, twisted_agent.EnumerateClasses):
+class EnumerateClasses(HandleResponseMixin, pywbem.twisted_agent.EnumerateClasses):
     pass
 
 
-class EnumerateClassNames(HandleResponseMixin, twisted_agent.EnumerateClassNames):
+class EnumerateClassNames(HandleResponseMixin, pywbem.twisted_agent.EnumerateClassNames):
     pass
 
 
-class PullInstances(HandleResponseMixin, twisted_agent.PullInstances):
+class PullInstances(HandleResponseMixin, pywbem.twisted_agent.PullInstances):
     pass
 
 
-class OpenEnumerateInstances(HandleResponseMixin, twisted_agent.OpenEnumerateInstances):
+class OpenEnumerateInstances(HandleResponseMixin, pywbem.twisted_agent.OpenEnumerateInstances):
     pass
 

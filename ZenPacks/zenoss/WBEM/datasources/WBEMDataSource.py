@@ -19,13 +19,13 @@ from twisted.python import failure
 from zope.component import adapts
 from zope.interface import implements
 
-from Products.ZenEvents import ZenEventClasses
-from Products.ZenUtils.Utils import prepId
 from Products.Zuul.form import schema
 from Products.Zuul.infos import ProxyProperty
 from Products.Zuul.infos.template import RRDDataSourceInfo
 from Products.Zuul.interfaces import IRRDDataSourceInfo
 from Products.Zuul.utils import ZuulMessageFactory as _t
+from Products.ZenEvents import ZenEventClasses
+from Products.ZenUtils.Utils import prepId
 
 from ZenPacks.zenoss.PythonCollector.datasources.PythonDataSource \
     import PythonDataSource, PythonDataSourcePlugin
@@ -36,13 +36,10 @@ from ZenPacks.zenoss.WBEM.utils import (
     convert_to_timestamp,
 )
 
-addLocalLibPath()
-
+from ZenPacks.zenoss.WBEM import dependencies
+dependencies.import_wbem_libs()
 from pywbem import CIMDateTime
-from pywbem.twisted_agent import (
-    ExecQuery,
-    OpenEnumerateInstances,
-)
+addLocalLibPath()
 
 CIM_CLASSNAME = re.compile(r'from\s+([\w_]+)', re.I)
 
@@ -60,7 +57,6 @@ def string_to_lines(string):
         return string.splitlines()
 
     return None
-
 
 class WBEMDataSource(PythonDataSource):
     """Datasource used to capture datapoints from WBEM providers."""
@@ -89,54 +85,6 @@ class WBEMDataSource(PythonDataSource):
         )
 
 
-class IWBEMDataSourceInfo(IRRDDataSourceInfo):
-    cycletime = schema.TextLine(
-        title=_t(u'Cycle Time (seconds)'))
-
-    namespace = schema.TextLine(
-        group=_t('WBEM'),
-        title=_t('Namespace'))
-
-    query = schema.Text(
-        group=_t(u'WBEM'),
-        title=_t('CQL Query'),
-        xtype='twocolumntextarea')
-
-    result_component_key = schema.TextLine(
-        group=_t(u'WBEM Results'),
-        title=_t(u'Result Component Key'))
-
-    result_component_value = schema.TextLine(
-        group=_t(u'WBEM Results'),
-        title=_t(u'Result Component Value'))
-
-    result_timestamp_key = schema.TextLine(
-        group=_t(u'WBEM Results'),
-        title=_t(u'Result Timestamp Key'))
-
-
-class WBEMDataSourceInfo(RRDDataSourceInfo):
-    implements(IWBEMDataSourceInfo)
-    adapts(WBEMDataSource)
-
-    testable = False
-
-    cycletime = ProxyProperty('cycletime')
-
-    namespace = ProxyProperty('namespace')
-    result_component_key = ProxyProperty('result_component_key')
-    result_component_value = ProxyProperty('result_component_value')
-    result_timestamp_key = ProxyProperty('result_timestamp_key')
-
-    @property
-    def query(self):
-        return "\n".join(self._object.query)
-
-    @query.setter
-    def query(self, val):
-        self._object.query = string_to_lines(val)
-
-
 class WBEMDataSourcePlugin(PythonDataSourcePlugin):
     proxy_attributes = (
         'zWBEMPort',
@@ -146,7 +94,27 @@ class WBEMDataSourcePlugin(PythonDataSourcePlugin):
         'zWBEMRequestTimeout',
         'zWBEMMaxObjectCount',
         'zWBEMOperationTimeout',
-        )
+    )
+
+    def loadDependencies(self):
+        try:
+            global pywbem
+            if pywbem:
+                pass
+        except:
+            from ZenPacks.zenoss.WBEM import dependencies
+            dependencies.import_wbem_libs()
+            import pywbem
+
+        try:
+            global CIMDateTime, ExecQuery, OpenEnumerateInstances
+            from pywbem import CIMDateTime
+            from pywbem.twisted_agent import (
+                ExecQuery,
+                OpenEnumerateInstances,
+            )
+        except:
+            log.error('Errors encountered when loading WBEM dependencies')
 
     @classmethod
     def config_key(cls, datasource, context):
@@ -198,13 +166,14 @@ class WBEMDataSourcePlugin(PythonDataSourcePlugin):
         return params
 
     def collect(self, config):
-
+        self.loadDependencies()
         ds0 = config.datasources[0]
 
         credentials = (ds0.zWBEMUsername, ds0.zWBEMPassword)
 
         if ds0.zWBEMMaxObjectCount > 0:
             property_filter = ds0.params.get('property_filter', (None, None))
+            global OpenEnumerateInstances
             factory = OpenEnumerateInstances(
                 credentials,
                 namespace=ds0.params['namespace'],
@@ -217,6 +186,7 @@ class WBEMDataSourcePlugin(PythonDataSourcePlugin):
                 PropertyFilter=property_filter,
                 ResultComponentKey=ds0.params['result_component_key']
             )
+            from ZenPacks.zenoss.WBEM.modeler.wbem import check_if_complete
             factory.deferred.addCallback(
                 check_if_complete, ds0,
                 ds0.params['namespace'],
@@ -225,6 +195,7 @@ class WBEMDataSourcePlugin(PythonDataSourcePlugin):
                 ResultComponentKey=ds0.params['result_component_key']
             )
         else:
+            global ExecQuery
             factory = ExecQuery(
                 credentials,
                 ds0.params['query_language'],
@@ -237,6 +208,7 @@ class WBEMDataSourcePlugin(PythonDataSourcePlugin):
         return add_timeout(factory, ds0.zWBEMRequestTimeout)
 
     def onSuccess(self, results, config):
+        self.loadDependencies()
         data = self.new_data()
         ds0 = config.datasources[0]
 
@@ -255,7 +227,7 @@ class WBEMDataSourcePlugin(PythonDataSourcePlugin):
         # the key. This allows us to avoid an inner loop below.
         datasources = dict(
             (x.params.get('result_component_value', ''), x) \
-                for x in config.datasources)
+            for x in config.datasources)
 
         result_component_key = \
             ds0.params['result_component_key']
@@ -270,6 +242,11 @@ class WBEMDataSourcePlugin(PythonDataSourcePlugin):
                     datasource = datasources.get(result_key_value)
                 else:
                     result_key_value = result[result_component_key]
+                    datasource = datasources.get(result_key_value)
+
+                if not datasource:
+                    # fix for zps-3572; checks for result_key_value without whitespace
+                    result_key_value = result_key_value.replace(' ', '')
                     datasource = datasources.get(result_key_value)
 
                 if not datasource:
@@ -304,6 +281,7 @@ class WBEMDataSourcePlugin(PythonDataSourcePlugin):
             for datapoint in datasource.points:
                 if datapoint.id in result:
                     value = result[datapoint.id]
+                    global CIMDateTime
                     if isinstance(value, CIMDateTime):
                         value = convert_to_timestamp(value)
                     data['values'][component_id][datapoint.id] = \
@@ -340,6 +318,54 @@ class WBEMDataSourcePlugin(PythonDataSourcePlugin):
         })
 
         return data
+
+
+class IWBEMDataSourceInfo(IRRDDataSourceInfo):
+    cycletime = schema.TextLine(
+        title=_t(u'Cycle Time (seconds)'))
+
+    namespace = schema.TextLine(
+        group=_t('WBEM'),
+        title=_t('Namespace'))
+
+    query = schema.Text(
+        group=_t(u'WBEM'),
+        title=_t('CQL Query'),
+        xtype='twocolumntextarea')
+
+    result_component_key = schema.TextLine(
+        group=_t(u'WBEM Results'),
+        title=_t(u'Result Component Key'))
+
+    result_component_value = schema.TextLine(
+        group=_t(u'WBEM Results'),
+        title=_t(u'Result Component Value'))
+
+    result_timestamp_key = schema.TextLine(
+        group=_t(u'WBEM Results'),
+        title=_t(u'Result Timestamp Key'))
+
+
+class WBEMDataSourceInfo(RRDDataSourceInfo):
+    implements(IWBEMDataSourceInfo)
+    adapts(WBEMDataSource)
+
+    testable = False
+
+    cycletime = ProxyProperty('cycletime')
+
+    namespace = ProxyProperty('namespace')
+    result_component_key = ProxyProperty('result_component_key')
+    result_component_value = ProxyProperty('result_component_value')
+    result_timestamp_key = ProxyProperty('result_timestamp_key')
+
+    @property
+    def query(self):
+        return "\n".join(self._object.query)
+
+    @query.setter
+    def query(self, val):
+        self._object.query = string_to_lines(val)
 
 
 def add_timeout(factory, seconds):

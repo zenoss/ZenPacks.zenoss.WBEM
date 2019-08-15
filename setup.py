@@ -3,7 +3,7 @@
 # or saved.  Do not modify them directly here.
 # NB: PACKAGES is deprecated
 NAME = "ZenPacks.zenoss.WBEM"
-VERSION = "2.1.0"
+VERSION = "3.0.0"
 AUTHOR = "Zenoss"
 LICENSE = "All Rights Reserved"
 NAMESPACE_PACKAGES = ['ZenPacks', 'ZenPacks.zenoss']

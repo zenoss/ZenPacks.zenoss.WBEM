@@ -25,9 +25,12 @@ You must also have the zWBEMPort, zWBEMUsername and zWBEMPassword properties
 set to succesfully pull data.
 
 """
+from ZenPacks.zenoss.WBEM import dependencies
+dependencies.import_wbem_libs()
+
 import itertools
 
-from pywbem.utils import extend_results
+from pywbem.twisted_agent import extend_results
 
 from twisted.internet import ssl, reactor
 from twisted.internet.defer import DeferredList, CancelledError
