@@ -30,7 +30,7 @@ default: egg
 
 egg:
 	# setup.py will call 'make build' before creating the egg
-	python setup.py bdist_egg
+	python2 setup.py bdist_egg
 
 build: dependencies $(LIB_DIR) $(BIN_DIR)
 	@echo
