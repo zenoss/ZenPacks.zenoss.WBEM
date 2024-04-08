@@ -13,32 +13,15 @@ active subscription.
 Releases
 --------
 
-Version 3.0.0- [Download](http://wiki.zenoss.org/download/zenpacks/ZenPacks.zenoss.WBEM/3.0.0/ZenPacks.zenoss.WBEM-3.0.0.egg){.external}
+Version 3.0.1- [Download](https://delivery.zenoss.com/){.external}
+:   Released on 2024/04/08
+:   Requires [PythonCollector ZenPack](/product/zenpacks/pythoncollector "ZenPack:PythonCollector")
+:   Compatible with Zenoss 6.x and Zenoss Cloud
+
+Version 3.0.0- [Download](https://delivery.zenoss.com/){.external}
 :   Released on 2019/08/15
 :   Requires [PythonCollector ZenPack](/product/zenpacks/pythoncollector "ZenPack:PythonCollector")
-:   Compatible with Zenoss Cloud, 6.2
-
-Version 2.1.1- [Download](http://wiki.zenoss.org/download/zenpacks/ZenPacks.zenoss.WBEM/2.1.1/ZenPacks.zenoss.WBEM-2.1.1.egg){.external}
-:   Released on 2019/06/20
-:   Requires [PythonCollector ZenPack](/product/zenpacks/pythoncollector "ZenPack:PythonCollector")
-:   Compatible with Zenoss Cloud, 5.3 - 6.2
-
-Version 2.1.0- [Download](http://wiki.zenoss.org/download/zenpacks/ZenPacks.zenoss.WBEM/2.1.0/ZenPacks.zenoss.WBEM-2.1.0.egg){.external}
-:   Released on 2018/09/26
-:   Requires [PythonCollector ZenPack](/product/zenpacks/pythoncollector "ZenPack:PythonCollector")
-:   Compatible with Zenoss Cloud, 5.3 - 6.2, 4.2.5
-
-Version 2.0.1- [Download](http://wiki.zenoss.org/download/zenpacks/ZenPacks.zenoss.WBEM/2.0.1/ZenPacks.zenoss.WBEM-2.0.1.egg){.external}
-:   Released on 2018/05/15
-:   Requires [PythonCollector ZenPack](/product/zenpacks/pythoncollector "ZenPack:PythonCollector")
-:   Compatible with Zenoss Core 4.2.x, Zenoss Core 5.x.x, Zenoss
-    Resource Manager 4.2.x, Zenoss Resource Manager 5.x.x, Zenoss Core 6.x.x, Zenoss Resource Manager 6.x.x
-
-Version 1.0.3- [Download](http://wiki.zenoss.org/download/zenpacks/ZenPacks.zenoss.WBEM/1.0.3/ZenPacks.zenoss.WBEM-1.0.3.egg){.external}
-:   Released on 2015/09/11
-:   Requires [PythonCollector ZenPack](/product/zenpacks/pythoncollector "ZenPack:PythonCollector")
-:   Compatible with Zenoss Core 4.2.x, Zenoss Core 5.x.x, Zenoss
-    Resource Manager 4.2.x, Zenoss Resource Manager 5.x.x
+:   Compatible with Zenoss 6.x and Zenoss Cloud
 
 Background
 ----------
@@ -211,6 +194,10 @@ For that example it looks like:
 
 Changes
 -------
+
+3.0.1
+- Make WBEM ZenPack compatible with Ubuntu-based CZ 7.2 (ZPS-8591)
+- Tested with Zenoss Cloud and Zenoss Resource Manager 6.7.0
 
 3.0.0
 -   Updated to use the lastest versions of pywbem and M2Crypto libraries. Prior pywbem libs exclusively used SSLv2 (which is now rejected by most/all SSL Servers)

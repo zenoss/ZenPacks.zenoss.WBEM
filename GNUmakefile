@@ -18,11 +18,11 @@ DOC_DIR=$(HERE)/docs
 PLY_TAR=$(HERE)/src/ply-3.11.tar.gz
 TYPING_TAR=$(HERE)/src/typing-3.6.6.tar.gz
 PYWBEMZ_TAR=$(HERE)/src/pywbemz-0.14.3.tar.gz
-M2CRYPTO_TAR=$(HERE)/src/M2Crypto-0.32.0.tar.gz
+M2CRYPTO_TAR=$(HERE)/src/m2crypto-0.38.0.tar.gz
 PLY_DEP=$(DEPS)/ply-3.11
 TYPING_DEP=$(DEPS)/typing-3.6.6
 PYWBEMZ_DEP=$(DEPS)/pywbemz-0.14.3
-M2CRYPTO_DEP=$(DEPS)/m2crypto-0.32.0
+M2CRYPTO_DEP=$(DEPS)/m2crypto-0.38.0
 
 .PHONY: docs
 
@@ -30,7 +30,7 @@ default: egg
 
 egg:
 	# setup.py will call 'make build' before creating the egg
-	python setup.py bdist_egg
+	python2 setup.py bdist_egg
 
 build: dependencies $(LIB_DIR) $(BIN_DIR)
 	@echo
