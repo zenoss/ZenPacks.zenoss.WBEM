@@ -29,7 +29,7 @@ def import_wbem_libs():
     if not modules_imported:
         import_module('ply',      'dependencies/ply-3.11')
         import_module('typing',   'dependencies/typing-3.6.6')
-        import_module('M2Crypto', 'dependencies/m2crypto-0.32.0')
+        import_module('M2Crypto', 'dependencies/m2crypto-0.38.0')
         import_module('pywbem',   'dependencies/pywbemz-0.14.3')
         set_monkeypatches()
         #link_CIMDateTime()
